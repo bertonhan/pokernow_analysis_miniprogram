@@ -1,0 +1,559 @@
+/* miniprogram/pages/match/detail/index.wxss */
+
+/* === 1. 全局重置 === */
+page {
+  background-color: #f6f6f6;
+  width: 100%;
+  overflow-x: hidden;
+  box-sizing: border-box;
+  padding: 0 !important; 
+  margin: 0 !important;
+}
+
+view, text, scroll-view, image {
+  box-sizing: border-box;
+}
+
+.container {
+  width: 100vw;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  padding: 0; 
+  align-items: stretch;
+}
+
+/* === 2. 全宽头部区域 (Header Section) === */
+.header-section {
+  background: white;
+  width: 100%;
+  border-radius: 0 0 40rpx 40rpx;
+  padding: 30rpx 32rpx 40rpx 32rpx;
+  box-shadow: 0 4rpx 30rpx rgba(0,0,0,0.03);
+  margin-bottom: 24rpx;
+  z-index: 10;
+}
+
+/* 标题行 */
+.header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 24rpx;
+}
+/* 【新增】标题容器：包含标题文本和编辑按钮 */
+.title-wrap {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  margin-right: 20rpx;
+}
+.match-name {
+  font-size: 40rpx;
+  font-weight: 800;
+  color: #333;
+  flex: 1;
+  margin-right: 20rpx;
+  line-height: 1.3;
+}
+/* 【新增】编辑按钮 */
+.edit-btn {
+  padding: 10rpx;
+  margin-left: 10rpx;
+  display: flex;
+  align-items: center;
+}
+
+.edit-icon {
+  width: 32rpx;
+  height: 32rpx;
+  opacity: 0.4;
+}
+.status-tag {
+  font-size: 22rpx;
+  color: #999;
+  background: #f5f5f5;
+  padding: 6rpx 16rpx;
+  border-radius: 30rpx;
+  flex-shrink: 0;
+  margin-top: 10rpx;
+  font-weight: 500;
+}
+
+.status-tag.green {
+  color: #fff;
+  background: #07c160;
+  box-shadow: 0 4rpx 10rpx rgba(7, 193, 96, 0.3);
+}
+
+/* 信息块 (垂直排列) */
+.info-block {
+  display: flex;
+  flex-direction: column;
+  gap: 12rpx;
+  margin-bottom: 30rpx;
+}
+
+.info-row {
+  display: flex;
+  align-items: baseline;
+}
+
+.label {
+  font-size: 26rpx; /* 标签字号 */
+  color: #999;
+  width: 140rpx; /* 固定宽度，对齐更好看 */
+  flex-shrink: 0;
+}
+
+.value {
+  font-size: 26rpx; /* 值字号减小 */
+  color: #555;
+  /* 颜色稍微深一点 */
+  font-weight: 500;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  word-break: break-all;
+  /* 防止长ID撑破 */
+  line-height: 1.4;
+}
+
+.value.id-text {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  letter-spacing: 1rpx;
+}
+
+.highlight {
+  color: #07c160;
+  font-weight: 600;
+}
+
+/* === 3. 隐私提示条 (内嵌式) === */
+.privacy-banner {
+  background: #e6f7ff;
+  border: 1rpx solid #bae7ff;
+  border-radius: 16rpx;
+  padding: 16rpx 24rpx;
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+}
+
+.privacy-banner text {
+  font-size: 24rpx;
+  color: #0050b3;
+  font-weight: 500;
+}
+
+/* === 4. 列表区域 (Stats Container) === */
+.stats-container {
+  flex: 1;
+  width: 100%;
+  padding: 0 24rpx 40rpx 24rpx;
+}
+
+/* === 修改 section-header 相关样式 === */
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center; /* 改为 center 垂直居中 */
+  margin-bottom: 20rpx;
+  padding: 0 8rpx;
+}
+/* 【新增】标题行容器 (包含标题+复制图标) */
+.title-row {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+}
+.section-title {
+  font-size: 34rpx;
+  font-weight: 700;
+  color: #333;
+}
+
+/* 【新增】复制按钮 */
+.copy-btn {
+  display: flex;
+  align-items: center;
+  padding: 8rpx; /* 增加点击热区 */
+  background: #f0f0f0;
+  border-radius: 8rpx;
+}
+
+.copy-btn:active {
+  background: #e0e0e0;
+}
+.copy-icon {
+  width: 32rpx;
+  height: 32rpx;
+}
+.section-subtitle {
+  font-size: 24rpx;
+  color: #999;
+}
+
+/* === 5. 选手卡片 === */
+.player-card {
+  background: white;
+  width: 100%;
+  border-radius: 20rpx;
+  padding: 24rpx;
+  margin-bottom: 20rpx;
+  box-shadow: 0 2rpx 10rpx rgba(0,0,0,0.01);
+  position: relative;
+  overflow: hidden;
+  border: 2rpx solid transparent;
+}
+
+.is-user-card {
+  border-color: #91d5ff;
+  background: #f0faff;
+}
+
+.card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16rpx;
+}
+
+/* 让TOP3装饰层在内容下方（不影响非TOP3） */
+.card-top, .tags-row, .stat-grid {
+  position: relative;
+  z-index: 1;
+}
+
+/* 选手基本信息 */
+.player-info {
+  display: flex;
+  align-items: center;
+  flex: 1; 
+  overflow: hidden;
+}
+
+.rank-badge {
+  width: 38rpx;
+  height: 38rpx;
+  line-height: 38rpx;
+  text-align: center;
+  border-radius: 50%;
+  font-size: 22rpx;
+  font-weight: 800;
+  margin-right: 16rpx;
+  flex-shrink: 0;
+
+  /* 默认（非TOP3） */
+  background: linear-gradient(135deg, #f2f2f2 0%, #d9d9d9 100%);
+  color: #4b5563;
+  border: 1rpx solid rgba(255, 255, 255, 0.85);
+  box-shadow: 0 4rpx 10rpx rgba(0, 0, 0, 0.06), inset 0 2rpx 6rpx rgba(255, 255, 255, 0.55);
+}
+
+/* TOP3 勋章：金 / 银 / 铜 */
+.rank-1 {
+  background: linear-gradient(135deg, #ffffff 0%, #ffe9a8 40%, #fff2c7 75%, #f6c566 100%);
+  color: #4a2a00;
+  border: 1rpx solid rgba(255, 220, 140, 0.75);
+  box-shadow: 0 4rpx 12rpx rgba(255, 193, 7, 0.28), inset 0 2rpx 6rpx rgba(255, 255, 255, 0.70);
+}
+
+.rank-2 {
+  /* 银牌：更亮一点，带冷色高光，避免“灰” */
+  background: linear-gradient(135deg, #ffffff 0%, #fbfdff 30%, #eaf2ff 70%, #f3f6ff 100%);
+  color: #0f172a;
+  border: 1rpx solid rgba(191, 219, 254, 0.75);
+  box-shadow: 0 4rpx 12rpx rgba(59, 130, 246, 0.16), inset 0 2rpx 6rpx rgba(255, 255, 255, 0.78);
+}
+
+.rank-3 {
+  background: linear-gradient(135deg, #fff7f2 0%, #ffd8c0 38%, #ffe9dd 74%, #f2a362 100%);
+  color: #3b1f0c;
+  border: 1rpx solid rgba(255, 200, 165, 0.75);
+  box-shadow: 0 4rpx 12rpx rgba(245, 158, 11, 0.18), inset 0 2rpx 6rpx rgba(255, 255, 255, 0.62);
+}
+/* 头像 */
+.avatar-container {
+  width: 72rpx;
+  height: 72rpx;
+  margin-right: 16rpx;
+  position: relative; 
+  border-radius: 50%;
+  overflow: hidden;
+  background: #eee;
+  flex-shrink: 0;
+}
+
+.user-avatar { width: 100%; height: 100%; border-radius: 50%; position: absolute; top: 0; left: 0; }
+.user-avatar.default { z-index: 1;
+}
+.user-avatar.real { z-index: 2; }
+
+/* 名字 */
+.player-name-box {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  flex: 1;
+  margin-right: 20rpx;
+  min-width: 0;
+}
+
+.player-name {
+  font-size: 30rpx;
+  font-weight: 700;
+  color: #333;
+  line-height: 1.2; 
+  margin-bottom: 6rpx;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 马甲 */
+.bound-tags-row {
+  display: flex;
+  width: 100%;
+  overflow-x: auto; 
+  white-space: nowrap;
+  height: 34rpx; 
+  align-items: center;
+}
+.bound-tags-row::-webkit-scrollbar { display: none; }
+
+.bound-name-tag {
+  display: inline-flex;
+  font-size: 24rpx;
+  color: #666;
+  background: white;
+  /* 在淡蓝底色上用白色 */
+  padding: 0 8rpx;
+  border-radius: 6rpx;
+  margin-right: 10rpx; 
+  border: 1rpx solid #ddd;
+  flex-shrink: 0;
+  height: 32rpx;
+  line-height: 30rpx;
+  align-items: center;
+}
+
+/* 右侧战绩 */
+.top-right-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4rpx;
+}
+
+.hands-badge {
+  font-size: 24rpx;
+  color: #999;
+}
+
+.player-net {
+  font-size: 36rpx;
+  font-weight: 700;
+  font-family: 'DINAlternate-Bold', sans-serif;
+}
+.player-net.win { color: #fa5151; }
+.player-net.loss { color: #07c160; }
+
+/* 风格标签 */
+.tags-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12rpx;
+  margin-bottom: 20rpx;
+  padding-left: 52rpx; /* 对齐名字 */
+}
+
+.style-tag {
+  font-size: 20rpx;
+  padding: 2rpx 10rpx;
+  border-radius: 6rpx;
+  background: #f5f5f5;
+  color: #666;
+  border: 1rpx solid #eee;
+}
+.style-tag.loose { background: #e6f7ff; color: #1890ff; border-color: #91d5ff; }
+.style-tag.tight { background: #fff7e6; color: #fa8c16; border-color: #ffd591;
+}
+.style-tag.aggressive { background: #fff1f0; color: #f5222d; border-color: #ffa39e; }
+.style-tag.passive { background: #f6ffed; color: #52c41a; border-color: #b7eb8f; }
+.style-tag.station { background: #e6fffb;
+  color: #13c2c2; border-color: #87e8de; }
+.style-tag.balance { background: #f0f5ff; color: #2f54eb; border-color: #adc6ff; }
+.style-tag.luck-god { background: linear-gradient(135deg, #fffbe6 0%, #fff1b8 100%);
+  color: #d48806; border-color: #ffe58f; font-weight: 600; box-shadow: 0 2rpx 6rpx rgba(255, 193, 7, 0.2); }
+.style-tag.luck-king { background: #f9f0ff; color: #722ed1;
+  border-color: #d3adf7; font-weight: 600; }
+.style-tag.luck-bad { background: #f5f5f5; color: #8c8c8c; border-color: #d9d9d9; }
+.style-tag.luck-sad { background: #f6ffed; color: #389e0d; border-color: #b7eb8f;
+}
+
+/* 数据网格 */
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16rpx 8rpx; 
+  background: #f9f9f9;
+  padding: 20rpx;
+  border-radius: 12rpx;
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.stat-label {
+  font-size: 24rpx;
+  color: #999;
+  margin-bottom: 2rpx;
+}
+
+.stat-val {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #333;
+}
+.stat-val.high { color: #fa5151; }
+.stat-val.good { color: #ff9c6e;
+}
+
+/* Loading */
+.loading-box { padding: 40rpx; text-align: center; color: #999; font-size: 28rpx; display: flex; align-items: center; justify-content: center; gap: 10rpx;
+}
+.loading-spinner { width: 30rpx; height: 30rpx; border: 4rpx solid #eee; border-top-color: #07c160; border-radius: 50%; animation: spin 1s linear infinite;
+}
+@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+.empty-stats { text-align: center; padding: 60rpx;
+  color: #ccc; font-size: 26rpx; }
+
+/* === 荣誉榜单（TOP3）卡片：金 / 银 / 铜（更浅更通透：质感 + 轻科技）=== */
+/* WXML 里为 TOP3 注入了两个装饰层：.rank-edge / .rank-sheen */
+.rank-edge,
+.rank-sheen {
+  pointer-events: none;
+}
+
+/* 左侧“奖牌边” */
+.rank-edge {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 10rpx;
+  border-radius: 20rpx 0 0 20rpx;
+  opacity: 0.92;
+  z-index: 0;
+}
+
+/* 斜向高光（模拟金属光泽） */
+.rank-sheen {
+  position: absolute;
+  left: -45%;
+  top: -50rpx;
+  width: 190%;
+  height: 170rpx;
+  transform: rotate(-10deg);
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.72) 45%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  opacity: 0.40;
+  filter: blur(2rpx);
+  z-index: 0;
+}
+
+/* TOP3 卡片共性：更轻的阴影 + 内高光（整体更浅） */
+.rank-card-1,
+.rank-card-2,
+.rank-card-3 {
+  border-width: 2rpx !important;
+  box-shadow: 0 8rpx 20rpx rgba(0, 0, 0, 0.045) !important;
+}
+
+/* --- 金牌：更浅的暖金 + 轻拉丝 --- */
+.rank-card-1 {
+  background:
+    radial-gradient(circle at 16% 20%, rgba(255, 255, 255, 0.92) 0%, rgba(255, 255, 255, 0) 48%),
+    radial-gradient(circle at 92% 12%, rgba(255, 214, 10, 0.20) 0%, rgba(255, 214, 10, 0) 62%),
+    linear-gradient(135deg, #ffffff 0%, #fff7dd 24%, #ffeec4 48%, #ffe3a3 76%, #f6c566 100%),
+    repeating-linear-gradient(110deg, rgba(255, 255, 255, 0.18) 0 4rpx, rgba(0, 0, 0, 0.015) 4rpx 10rpx)
+    !important;
+  border-color: rgba(255, 210, 130, 0.50) !important;
+  box-shadow:
+    inset 0 1rpx 0 rgba(255, 255, 255, 0.72),
+    0 8rpx 20rpx rgba(255, 193, 7, 0.14)
+    !important;
+}
+
+.rank-card-1 .rank-edge {
+  background: linear-gradient(180deg, rgba(255, 236, 170, 0.95) 0%, rgba(245, 200, 95, 0.95) 100%);
+}
+
+.rank-card-1 .stat-grid {
+  background: rgba(255, 255, 255, 0.72);
+  border: 1rpx solid rgba(255, 210, 130, 0.18);
+  box-shadow: inset 0 1rpx 0 rgba(255, 255, 255, 0.86);
+}
+
+/* --- 银牌：更白更亮 + 冷色高光 + 更淡网格（避免灰）--- */
+.rank-card-2 {
+  background:
+    radial-gradient(circle at 16% 20%, rgba(255, 255, 255, 0.96) 0%, rgba(255, 255, 255, 0) 52%),
+    radial-gradient(circle at 90% 18%, rgba(59, 130, 246, 0.14) 0%, rgba(59, 130, 246, 0) 62%),
+    linear-gradient(135deg, #ffffff 0%, #f9fcff 22%, #f2f6ff 50%, #edf3fb 78%, #ffffff 100%),
+    repeating-linear-gradient(0deg, rgba(59, 130, 246, 0.028) 0 1rpx, rgba(0, 0, 0, 0) 1rpx 14rpx),
+    repeating-linear-gradient(90deg, rgba(99, 179, 237, 0.024) 0 1rpx, rgba(0, 0, 0, 0) 1rpx 18rpx),
+    repeating-linear-gradient(110deg, rgba(255, 255, 255, 0.16) 0 3rpx, rgba(0, 0, 0, 0.012) 3rpx 8rpx)
+    !important;
+  border-color: rgba(160, 205, 255, 0.45) !important;
+  box-shadow:
+    inset 0 1rpx 0 rgba(255, 255, 255, 0.88),
+    0 8rpx 20rpx rgba(15, 23, 42, 0.07)
+    !important;
+}
+
+.rank-card-2 .rank-edge {
+  background: linear-gradient(180deg, rgba(160, 220, 255, 0.95) 0%, rgba(198, 202, 255, 0.95) 100%);
+}
+
+/* 银牌的高光稍微更明显一点，增强“金属感” */
+.rank-card-2 .rank-sheen {
+  opacity: 0.48;
+}
+
+.rank-card-2 .stat-grid {
+  background: rgba(255, 255, 255, 0.80);
+  border: 1rpx solid rgba(160, 205, 255, 0.16);
+  box-shadow: inset 0 1rpx 0 rgba(255, 255, 255, 0.90);
+}
+
+/* --- 铜牌：更浅的铜橙/焦糖，和金牌区分明显 --- */
+.rank-card-3 {
+  background:
+    radial-gradient(circle at 16% 20%, rgba(255, 255, 255, 0.88) 0%, rgba(255, 255, 255, 0) 52%),
+    radial-gradient(circle at 92% 16%, rgba(255, 107, 107, 0.10) 0%, rgba(255, 107, 107, 0) 64%),
+    linear-gradient(135deg, #ffffff 0%, #fff0e6 24%, #ffe3d4 50%, #ffd1b0 78%, #f3a05c 100%),
+    repeating-linear-gradient(112deg, rgba(255, 255, 255, 0.16) 0 4rpx, rgba(0, 0, 0, 0.015) 4rpx 10rpx)
+    !important;
+  border-color: rgba(255, 190, 150, 0.50) !important;
+  box-shadow:
+    inset 0 1rpx 0 rgba(255, 255, 255, 0.72),
+    0 8rpx 20rpx rgba(224, 122, 42, 0.14)
+    !important;
+}
+
+.rank-card-3 .rank-edge {
+  background: linear-gradient(180deg, rgba(255, 200, 155, 0.95) 0%, rgba(210, 122, 52, 0.95) 100%);
+}
+
+.rank-card-3 .stat-grid {
+  background: rgba(255, 255, 255, 0.72);
+  border: 1rpx solid rgba(255, 190, 150, 0.18);
+  box-shadow: inset 0 1rpx 0 rgba(255, 255, 255, 0.88);
+}

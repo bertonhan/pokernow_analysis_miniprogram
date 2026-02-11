@@ -1,0 +1,45 @@
+{
+  "pages": [
+    "pages/profile/index",
+    "pages/match/list/index",
+    "pages/match/add/index",
+    "pages/match/detail/index",
+    "pages/player/index",
+    "pages/match/bind/index"
+  ],
+  "window": {
+    "backgroundColor": "#F6F6F6",
+    "backgroundTextStyle": "light",
+    "navigationBarBackgroundColor": "#F6F6F6",
+    "navigationBarTitleText": "德扑格局 Agent",
+    "navigationBarTextStyle": "black"
+  },
+  "tabBar": {
+    "custom": false,
+    "color": "#999999",
+    "selectedColor": "#07c160",
+    "backgroundColor": "#ffffff",
+    "list": [
+      {
+        "pagePath": "pages/match/list/index",
+        "text": "对局",
+        "iconPath": "images/match.png",
+        "selectedIconPath": "images/match_active.png"
+      },
+      {
+        "pagePath": "pages/player/index",
+        "text": "选手",
+        "iconPath": "images/player.png",
+        "selectedIconPath": "images/player_active.png"
+      },
+      {
+        "pagePath": "pages/profile/index",
+        "text": "我的",
+        "iconPath": "images/profile.png",
+        "selectedIconPath": "images/profile_active.png"
+      }
+    ]
+  },
+  "sitemapLocation": "sitemap.json",
+  "style": "v2"
+}

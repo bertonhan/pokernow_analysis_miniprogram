@@ -1,0 +1,70 @@
+<view class="container">
+  
+  <view class="header-card">
+    <view class="header-content">
+      <view class="title">绑定选手身份</view>
+      <view class="subtitle">请认领本局游戏你的马甲</view>
+    </view>
+
+    <view class="status-banner {{matchStatus === '已结束' ? 'ended' : 'ongoing'}}">
+      <icon type="{{matchStatus === '已结束' ? 'info' : 'warn'}}" size="14" color="{{matchStatus === '已结束' ? '#999' : '#fa8c16'}}"></icon>
+      <text wx:if="{{matchStatus === '已结束'}}">对局已结束，身份完全公开</text>
+      <text wx:else>对局进行中，已隐藏对手身份</text>
+    </view>
+  </view>
+
+  <scroll-view scroll-y class="list-area">
+    <block wx:for="{{playerList}}" wx:key="playerId">
+      <view class="player-card {{item.status === 'mine' ? 'is-mine' : ''}}">
+        
+        <view class="avatar {{item.status === 'mine' ? 'avatar-mine' : ''}}">
+          {{item.playerName[0]}}
+        </view>
+
+        <view class="info">
+          <view class="name-row">
+            <text class="name {{item.status === 'others' && matchStatus !== '已结束' ? 'masked' : ''}}">{{item.boundGejuId || item.playerName}}</text>
+            <text wx:if="{{item.boundGejuId && item.boundGejuId !== item.playerName}}" class="sub-name">({{item.playerName}})</text>
+            <view class="tag-mine" wx:if="{{item.status === 'mine'}}">我的</view>
+          </view>
+          
+          <view class="id-row">
+            <text class="id-label">ID:</text>
+            <text class="id-val">{{item.playerId}}</text>
+          </view>
+        </view>
+
+        <view class="action">
+          <view 
+            wx:if="{{item.status === 'available'}}" 
+            class="btn bind" 
+            bindtap="handleBind" 
+            data-pid="{{item.playerId}}" 
+            data-name="{{item.playerName}}"
+            hover-class="btn-hover"
+          >认领</view>
+
+          <view 
+            wx:if="{{item.status === 'mine'}}" 
+            class="btn unbind" 
+            bindtap="handleUnbind" 
+            data-pid="{{item.playerId}}" 
+            data-name="{{item.playerName}}"
+            hover-class="btn-hover"
+          >解绑</view>
+
+          <view wx:if="{{item.status === 'others'}}" class="locked-state">
+             <image class="lock-icon" src="https://img.icons8.com/ios-glyphs/30/cccccc/lock.png"></image>
+             <text>已占</text>
+          </view>
+        </view>
+
+      </view>
+    </block>
+    
+    <view wx:if="{{!loading && playerList.length === 0}}" class="empty-tip">
+      暂无选手记录
+    </view>
+    <view style="height: 60rpx;"></view>
+  </scroll-view>
+</view>

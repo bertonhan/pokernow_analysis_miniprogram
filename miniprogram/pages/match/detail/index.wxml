@@ -1,0 +1,128 @@
+<wxs module="helper">
+var getTagClass = function(tag) {
+  var map = {
+    '松': 'loose', '紧': 'tight', '凶': 'aggressive', '弱': 'passive',
+    '跟注': 'station', '平衡': 'balance',
+    '欧皇': 'luck-god', '天选': 'luck-god', '跑马王': 'luck-king',
+    '非酋': 'luck-bad', '倒霉': 'luck-bad', '慈善家': 'luck-sad'
+  };
+  return map[tag] || '';
+}
+module.exports.getTagClass = getTagClass;
+</wxs>
+
+<view class="container" wx:if="{{!loading && matchInfo}}">
+  
+  <view class="header-section">
+    <view class="header-row">
+      <view class="title-wrap">
+        <view class="match-name">{{matchInfo.name}}</view>
+        <view class="edit-btn" wx:if="{{canRename}}" bindtap="onRenameMatch">
+          <image class="edit-icon" src="https://img.icons8.com/ios-glyphs/30/999999/edit--v1.png"></image>
+        </view>
+      </view>
+
+      <view class="status-tag {{matchInfo.status=='记录中'?'green':''}}">{{matchInfo.status}}</view>
+    </view>
+    
+    <view class="info-block">
+      <view class="info-row">
+        <text class="label">对局 ID</text>
+        <text class="value id-text" selectable="true">{{matchInfo.gameId}}</text>
+      </view>
+      <view class="info-row">
+        <text class="label">当前手牌</text>
+        <text class="value highlight">Hand #{{matchInfo.currentHandNumber}}</text>
+      </view>
+    </view>
+
+    <view class="privacy-banner" wx:if="{{matchInfo.status !== '已结束'}}">
+      <icon type="info" size="14" color="#0050b3"></icon>
+      <text>对局进行中，已隐藏选手真实身份</text>
+    </view>
+  </view>
+
+  <view class="stats-container">
+    
+    <view class="section-header" wx:if="{{statsList.length > 0}}">
+      
+      <view class="title-row">
+        <view class="section-title">选手战绩分析</view>
+        
+        <view 
+          class="copy-btn" 
+          wx:if="{{matchInfo.status === '已结束'}}" 
+          bindtap="onCopyStats"
+        >
+          <image class="copy-icon" src="https://img.icons8.com/material-outlined/48/000000/copy.png"></image>
+        </view>
+      </view>
+
+      <view class="section-subtitle">按盈利排序</view>
+    </view>
+
+    <view wx:if="{{analyzing}}" class="loading-box">
+      <view class="loading-spinner"></view>
+      <text>AI 正在分析牌局...</text>
+    </view>
+
+    <block wx:for="{{statsList}}" wx:key="_id">
+      <view class="player-card {{item.isUser ? 'is-user-card' : ''}} {{(matchInfo.status === '已结束' && item.rank <= 3) ? 'rank-card-' + item.rank : ''}}">
+        <view wx:if="{{matchInfo.status === '已结束' && item.rank <= 3}}" class="rank-edge"></view>
+        <view wx:if="{{matchInfo.status === '已结束' && item.rank <= 3}}" class="rank-sheen"></view>
+        
+        <view class="card-top">
+          <view class="player-info">
+            <view class="rank-badge rank-{{item.rank}}">{{item.rank}}</view>
+            
+            <view class="avatar-container" wx:if="{{item.isUser}}">
+               <image class="user-avatar default" src="https://img.icons8.com/color/96/user-male-circle--v1.png" mode="aspectFill"></image>
+               <image wx:if="{{item.avatarUrl}}" class="user-avatar real" src="{{item.avatarUrl}}" mode="aspectFill"></image>
+            </view>
+
+            <view class="player-name-box">
+              <view class="player-name">{{item.playerName}}</view>
+              <view class="bound-tags-row" wx:if="{{item.isUser && item.boundNames && item.boundNames.length > 0}}">
+                 <block wx:for="{{item.boundNames}}" wx:key="*this" wx:for-item="bName">
+                   <view class="bound-name-tag">{{bName}}</view>
+                </block>
+              </view>
+            </view>
+          </view>
+          
+          <view class="top-right-info">
+             <view class="hands-badge">手数: {{item.hands}}</view>
+            <view class="player-net {{item.net >= 0 ? 'win' : 'loss'}}">
+              {{item.netDisplay}}
+            </view>
+          </view>
+        </view>
+
+        <view class="tags-row" wx:if="{{item.tags.length > 0}}">
+          <block wx:for="{{item.tags}}" wx:key="*this" wx:for-item="tag">
+            <view class="style-tag {{helper.getTagClass(tag)}}">
+              {{tag}}
+            </view>
+          </block>
+        </view>
+
+        <view class="stat-grid">
+          <view class="stat-item"><text class="stat-label">VPIP</text><text class="stat-val {{item.vpip > 40 ? 'high' : ''}}">{{item.vpip}}%</text></view>
+          <view class="stat-item"><text class="stat-label">PFR</text><text class="stat-val">{{item.pfr}}%</text></view>
+          <view class="stat-item"><text class="stat-label">Limp</text><text class="stat-val">{{item.limp}}%</text></view>
+          <view class="stat-item"><text class="stat-label">激进 AF</text><text class="stat-val">{{item.af}}</text></view>
+          <view class="stat-item"><text class="stat-label">3-Bet</text><text class="stat-val">{{item.bet3}}%</text></view>
+          <view class="stat-item"><text class="stat-label">C-Bet</text><text class="stat-val">{{item.cbet}}%</text></view>
+          <view class="stat-item"><text class="stat-label">摊牌率</text><text class="stat-val">{{item.wtsd}}%</text></view>
+          <view class="stat-item"><text class="stat-label">摊牌胜</text><text class="stat-val {{item.wsd > 55 ? 'good' : ''}}">{{item.wsd}}%</text></view>
+        </view>
+
+      </view>
+    </block>
+
+    <view wx:if="{{!analyzing && statsList.length === 0}}" class="empty-stats">
+      <text>暂无数据，请等待对局产生手牌记录</text>
+    </view>
+    
+  </view>
+</view>

@@ -1,0 +1,199 @@
+/* miniprogram/pages/profile/index.wxss */
+page {
+  background-color: #f7f8fa; /* 更柔和的灰底 */
+}
+
+.container {
+  padding: 30rpx 24rpx; /* 减小左右边距，让卡片变宽 */
+  min-height: 100vh;
+  box-sizing: border-box;
+}
+
+/* === 通用卡片容器 === */
+.login-card,
+.profile-card {
+  background: white;
+  border-radius: 24rpx; /* 更大的圆角 */
+  padding: 60rpx 40rpx; /* 增加内部呼吸感 */
+  width: 100%;
+  box-sizing: border-box;
+  box-shadow: 0 8rpx 30rpx rgba(0, 0, 0, 0.04); /* 更柔和的高级阴影 */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* === 未登录态 === */
+.welcome-text {
+  font-size: 42rpx;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 16rpx;
+}
+
+.sub-text {
+  font-size: 28rpx;
+  color: #999;
+  margin-bottom: 80rpx;
+}
+
+.login-btn-entry {
+  width: 100% !important; /* 撑满卡片 */
+  height: 96rpx;
+  line-height: 96rpx;
+  border-radius: 48rpx;
+  font-size: 32rpx;
+  font-weight: 500;
+  box-shadow: 0 6rpx 16rpx rgba(7, 193, 96, 0.3); /* 绿色按钮光晕 */
+}
+
+/* === 表单样式 === */
+.title {
+  font-size: 36rpx;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 50rpx;
+  align-self: flex-start; /* 标题靠左对齐 */
+}
+
+.avatar-wrapper {
+  background: none;
+  padding: 0;
+  width: 160rpx !important;
+  margin-bottom: 40rpx;
+}
+
+.avatar-wrapper::after {
+  border: none;
+}
+
+.avatar {
+  width: 160rpx;
+  height: 160rpx;
+  border-radius: 50%;
+  background-color: #f0f0f0;
+  box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.1);
+}
+
+.tip {
+  font-size: 24rpx;
+  color: #999;
+  margin-top: 16rpx;
+}
+
+.form-group {
+  width: 100%;
+  margin-bottom: 60rpx;
+}
+
+.input-row {
+  display: flex;
+  align-items: center;
+  padding: 30rpx 0;
+  border-bottom: 2rpx solid #f0f0f0; /* 更细的分割线 */
+}
+
+.label {
+  width: 140rpx;
+  font-size: 30rpx;
+  color: #333;
+  font-weight: 500;
+}
+
+.input {
+  flex: 1;
+  font-size: 30rpx;
+  color: #333;
+  text-align: right; /* 输入内容靠右，显得整洁 */
+}
+
+.save-btn {
+  width: 100% !important;
+  height: 96rpx;
+  line-height: 96rpx;
+  border-radius: 48rpx;
+  font-size: 32rpx;
+  margin-bottom: 24rpx;
+}
+
+.cancel-btn {
+  width: 100% !important;
+  background: white;
+  color: #999;
+  font-weight: normal;
+  font-size: 30rpx;
+}
+
+/* === 已登录态样式优化 === */
+.success {
+  padding-top: 80rpx;
+  padding-bottom: 80rpx;
+}
+
+.avatar-large {
+  width: 180rpx;
+  height: 180rpx;
+  border-radius: 50%;
+  margin-bottom: 24rpx;
+  border: 6rpx solid #fff;
+  box-shadow: 0 10rpx 30rpx rgba(0, 0, 0, 0.08);
+}
+
+.user-name {
+  font-size: 44rpx;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 16rpx;
+}
+
+.user-id {
+  font-size: 26rpx;
+  color: #666;
+  background: #f2f4f6; /* 浅灰底色标签 */
+  padding: 8rpx 24rpx;
+  border-radius: 30rpx;
+  margin-bottom: 80rpx;
+  letter-spacing: 2rpx;
+}
+
+/* 按钮区域 */
+.action-area {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 24rpx; /* 按钮之间的间距 */
+}
+
+.action-btn {
+  width: 100% !important; /* 关键：撑满宽度 */
+  height: 100rpx; /* 增加高度 */
+  display: flex; /* 让文字垂直居中 */
+  align-items: center;
+  justify-content: center;
+  border-radius: 50rpx;
+  font-size: 32rpx;
+  font-weight: 500;
+  padding: 0;
+}
+
+/* 描边按钮样式 */
+.outline {
+  background: white;
+  border: 2rpx solid #e0e0e0;
+  color: #333;
+}
+
+/* 退出登录按钮样式 */
+.danger {
+  background: #fff5f5; /* 极淡的红色背景 */
+  color: #ff4d4f; /* 红色文字 */
+  border: none;
+}
+
+/* 点击态反馈 (可选) */
+.outline:active {
+  background-color: #f9f9f9;
+}
+.danger:active {
+  background-color: #ffe6e6;
+}

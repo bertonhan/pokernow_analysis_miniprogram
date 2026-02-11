@@ -1,0 +1,44 @@
+<view class="container">
+  
+  <view class="login-card" wx:if="{{!isLoggedIn && !showLoginForm}}">
+    <view class="welcome-text">欢迎来到德扑格局</view>
+    <view class="sub-text">登录后记录你的对局生涯</view>
+    <button class="login-btn-entry" type="primary" bindtap="onTapLogin">登录</button>
+  </view>
+
+  <view class="profile-card" wx:if="{{showLoginForm}}">
+    <view class="title">{{isEditing ? '修改档案' : '完善资料'}}</view>
+    
+    <button class="avatar-wrapper" open-type="chooseAvatar" bind:chooseavatar="onChooseAvatar">
+      <image class="avatar" src="{{tempAvatarUrl || defaultAvatar}}"></image>
+      <view class="tip">点击授权头像</view>
+    </button>
+
+    <view class="form-group">
+      <view class="input-row">
+        <text class="label">昵称</text>
+        <input type="nickname" class="input" placeholder="点击自动填入微信昵称" value="{{nickName}}" bindblur="onNicknameChange" bindinput="onNicknameInput" />
+      </view>
+      
+      <view class="input-row">
+        <text class="label">格局ID</text>
+        <input class="input" placeholder="设置你的专属ID" value="{{gejuId}}" bindinput="onGejuIdChange" />
+      </view>
+    </view>
+
+    <button class="save-btn" type="primary" bindtap="confirmLogin">确认保存</button>
+    <button class="cancel-btn" bindtap="cancelLogin">取消</button>
+  </view>
+
+  <view class="profile-card success" wx:if="{{isLoggedIn && !showLoginForm}}">
+    <image class="avatar-large" src="{{userInfo.avatarUrl}}"></image>
+    <view class="user-name">{{userInfo.nickName}}</view>
+    <view class="user-id">格局ID: {{userInfo.gejuId}}</view>
+    
+    <view class="action-area">
+      <button class="action-btn outline" bindtap="onTapEdit">修改档案</button>
+      <button class="action-btn danger" bindtap="onTapLogout">退出登录</button>
+    </view>
+  </view>
+
+</view>
