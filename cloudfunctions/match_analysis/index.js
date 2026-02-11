@@ -71,6 +71,7 @@ function buildRecord(gameId, id, name, net, stats, styles, isUser = false, avata
   return {
     gameId: gameId,
     playerId: id, 
+    userId: isUser ? id : '',
     playerName: name,
     isUser: isUser, 
     avatarUrl: avatar,

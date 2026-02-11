@@ -50,7 +50,9 @@ Page({
           this.setData({ statsList: sortedList })
           
           // 【新增】数据回来后，检查改名权限
-          this.checkRenamePermission(sortedList)
+          app.getOpenId(() => {
+            this.checkRenamePermission(sortedList)
+          })
         }
       },
       fail: err => {
