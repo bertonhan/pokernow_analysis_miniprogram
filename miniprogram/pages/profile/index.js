@@ -20,7 +20,7 @@ Page({
   },
   onShow() {
     // 告诉 TabBar 我是第 2 个 (我的)
-    if (typeof this.getTabBar === 'function' && this.getTabBar()) {
+    if (this.getTabBar && this.getTabBar()) {
       this.getTabBar().setData({ selected: 2 })
     }
     
@@ -138,8 +138,9 @@ Page({
   // === 提交数据 (登录/保存) ===
   async confirmLogin() {
     const { tempAvatarUrl, nickName, gejuId } = this.data;
+    const currentAvatar = this.data.userInfo && this.data.userInfo.avatarUrl;
 
-    if (!tempAvatarUrl && !this.data.userInfo?.avatarUrl) {
+    if (!tempAvatarUrl && !currentAvatar) {
        return wx.showToast({ title: '请选择头像', icon: 'none' });
     }
     if (!nickName || !gejuId) {

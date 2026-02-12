@@ -27,7 +27,7 @@ Page({
   onLoad() { this.checkAdmin() },
 
   onShow() {
-    if (typeof this.getTabBar === 'function' && this.getTabBar()) {
+    if (this.getTabBar && this.getTabBar()) {
       this.getTabBar().setData({ selected: 0 })
     }
     this.checkAccess(); 
@@ -81,7 +81,7 @@ Page({
       success: res => {
         // 安全检查，防止 map 报错
         if (res.result && res.result.data) {
-          const newList = res.result.data.map(item => ({ ...item, x: 0 }))
+          const newList = res.result.data.map(item => Object.assign({}, item, { x: 0 }))
           this.setData({ matchList: newList })
         }
       }

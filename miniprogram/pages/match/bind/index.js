@@ -44,7 +44,7 @@ Page({
 
       // 4. 获取真实名字 (云函数)
       let userMap = {} 
-      const userIds = [...new Set(bindings.map(b => b.userId))]
+      const userIds = Array.from(new Set(bindings.map(b => b.userId)))
       if (userIds.length > 0) {
         const mapRes = await wx.cloud.callFunction({
           name: 'match_bind_tool',

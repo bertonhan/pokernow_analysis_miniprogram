@@ -7,7 +7,7 @@ Page({
   },
 
   onShow() {
-    if (typeof this.getTabBar === 'function' && this.getTabBar()) {
+    if (this.getTabBar && this.getTabBar()) {
       this.getTabBar().setData({ selected: 1 })
     }
     this.checkAccess();

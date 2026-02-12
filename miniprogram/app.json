@@ -1,4 +1,5 @@
 {
+  "lazyCodeLoading": "requiredComponents",
   "pages": [
     "pages/profile/index",
     "pages/match/list/index",
@@ -28,7 +29,7 @@
       },
       {
         "pagePath": "pages/player/index",
-        "text": "选手",
+        "text": "玩家",
         "iconPath": "images/player.png",
         "selectedIconPath": "images/player_active.png"
       },

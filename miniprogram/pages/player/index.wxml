@@ -3,14 +3,14 @@
 <block wx:if="{{isLoggedIn}}">
   <view class="working-state">
     <image class="working-icon" src="https://img.icons8.com/ios/100/cccccc/hammer.png"></image>
-    <view class="working-text">选手数据分析功能开发中...</view>
+    <view class="working-text">玩家数据分析功能开发中...</view>
     <view class="working-sub-text">敬请期待</view>
   </view>
 </block>
 
 <view class="empty-state" wx:else>
   <image class="empty-icon" src="https://img.icons8.com/ios/100/cccccc/lock.png"></image>
-  <view class="empty-text">请登录后查看选手数据</view>
+  <view class="empty-text">请登录后查看玩家数据</view>
   <button class="login-jump-btn" bindtap="goToProfile">去登录</button>
 </view>
 

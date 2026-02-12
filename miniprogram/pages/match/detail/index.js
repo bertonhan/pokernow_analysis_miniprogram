@@ -100,12 +100,13 @@ Page({
     } else {
       this.setData({ canRename: false })
     }
+    const topWinner = sortedList && sortedList.length > 0 ? sortedList[0] : null
     console.log('[rename]', {
-      status: this.data.matchInfo?.status,
-      isRenamed: this.data.matchInfo?.isRenamed,
+      status: this.data.matchInfo && this.data.matchInfo.status,
+      isRenamed: this.data.matchInfo && this.data.matchInfo.isRenamed,
       myOpenId: app.globalData.openid,
-      winnerUserId: sortedList?.[0]?.userId,
-      winnerName: sortedList?.[0]?.playerName,
+      winnerUserId: topWinner && topWinner.userId,
+      winnerName: topWinner && topWinner.playerName,
     })    
   },
 
