@@ -112,10 +112,10 @@ Page({
   // === 【新增】点击重命名 ===
   onRenameMatch() {
     wx.showModal({
-      title: '重命名对局',
-      placeholderText: '输入新名称（自动添加日期前缀）',
+      title: '恭喜你成为Chipleader!',
+      placeholderText: '仅输入名字即可，自动添加前后缀',
       editable: true,
-      maxlength: 15, // 名字别太长
+      maxlength: 300, // 名字别太长
       success: (res) => {
         if (res.confirm && res.content) {
           const inputName = res.content.trim()
@@ -136,7 +136,8 @@ Page({
           }
 
           // 2. 拼接最终名称： "2.8决战紫禁之巅"
-          const finalName = prefix ? `${prefix}${inputName}` : inputName
+          const namePart = (inputName || '').trim()
+          const finalName = prefix ? `${prefix}德扑${namePart}${namePart ? '之战' : ''}`: `德扑${namePart}${namePart ? '之战' : ''}`
 
           // 3. 调用云函数更新
           wx.showLoading({ title: '保存中' })
