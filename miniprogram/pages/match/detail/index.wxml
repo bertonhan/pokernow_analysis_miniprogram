@@ -107,14 +107,14 @@ module.exports.getTagClass = getTagClass;
         </view>
 
         <view class="stat-grid">
-          <view class="stat-item"><text class="stat-label">VPIP</text><text class="stat-val {{item.vpip > 40 ? 'high' : ''}}">{{item.vpip}}%</text></view>
-          <view class="stat-item"><text class="stat-label">PFR</text><text class="stat-val">{{item.pfr}}%</text></view>
-          <view class="stat-item"><text class="stat-label">Limp</text><text class="stat-val">{{item.limp}}%</text></view>
-          <view class="stat-item"><text class="stat-label">激进 AF</text><text class="stat-val">{{item.af}}</text></view>
-          <view class="stat-item"><text class="stat-label">3-Bet</text><text class="stat-val">{{item.bet3}}%</text></view>
-          <view class="stat-item"><text class="stat-label">C-Bet</text><text class="stat-val">{{item.cbet}}%</text></view>
-          <view class="stat-item"><text class="stat-label">摊牌率</text><text class="stat-val">{{item.wtsd}}%</text></view>
-          <view class="stat-item"><text class="stat-label">摊牌胜</text><text class="stat-val {{item.wsd > 55 ? 'good' : ''}}">{{item.wsd}}%</text></view>
+          <view class="stat-item"><text class="stat-label">主动入池</text><text class="stat-val {{item.vpip > 40 ? 'high' : ''}}">{{item.vpip}}%</text></view>
+          <view class="stat-item"><text class="stat-label">翻前加注</text><text class="stat-val">{{item.pfr}}%</text></view>
+          <view class="stat-item"><text class="stat-label">平跟溜入</text><text class="stat-val">{{item.limp}}%</text></view>
+          <view class="stat-item"><text class="stat-label">激进因子</text><text class="stat-val">{{item.af}}</text></view>
+          <view class="stat-item"><text class="stat-label">3-Bet率</text><text class="stat-val">{{item.bet3}}%</text></view>
+          <view class="stat-item"><text class="stat-label">C-Bet率</text><text class="stat-val">{{item.cbet}}%</text></view>
+          <view class="stat-item"><text class="stat-label">摊牌比率</text><text class="stat-val">{{item.wtsd}}%</text></view>
+          <view class="stat-item"><text class="stat-label">摊牌胜率</text><text class="stat-val {{item.wsd > 55 ? 'good' : ''}}">{{item.wsd}}%</text></view>
         </view>
 
       </view>
