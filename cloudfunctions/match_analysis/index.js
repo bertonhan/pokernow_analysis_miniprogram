@@ -180,18 +180,29 @@ function buildRecord(gameId, id, name, net, stats, styles, isUser, avatar, bound
 async function loadMatchHandFacts(gameId) {
   const MAX_LIMIT = 100
   let facts = []
+  let lastHandNumber = 0
 
-  const countRes = await db.collection(FACT_COLLECTION).where({ gameId: gameId }).count()
-  const total = countRes.total || 0
-
-  for (let i = 0; i < total; i += MAX_LIMIT) {
+  while (true) {
     const batch = await db.collection(FACT_COLLECTION)
-      .where({ gameId: gameId })
+      .where({
+        gameId: gameId,
+        handNumber: _.gt(lastHandNumber)
+      })
+      .field({
+        handNumber: true,
+        players: true,
+        showdownPlayers: true
+      })
       .orderBy('handNumber', 'asc')
-      .skip(i)
       .limit(MAX_LIMIT)
       .get()
-    facts = facts.concat(batch.data || [])
+
+    const rows = batch.data || []
+    if (rows.length === 0) break
+
+    facts = facts.concat(rows)
+    lastHandNumber = safeNumber(rows[rows.length - 1].handNumber)
+    if (rows.length < MAX_LIMIT) break
   }
 
   return facts
@@ -218,30 +229,34 @@ async function loadMatchPlayerStatDocIds(gameId) {
   return ids
 }
 
-async function loadPersistedMatchPlayerStats(gameId) {
-  const MAX_LIMIT = 100
-  let docs = []
-  const countRes = await db.collection(PLAYER_STATS_COLLECTION).where({ gameId: gameId }).count()
-  const total = countRes.total || 0
+async function getLatestHandNumber(collectionName, gameId) {
+  const res = await db.collection(collectionName)
+    .where({ gameId: gameId })
+    .field({ handNumber: true })
+    .orderBy('handNumber', 'desc')
+    .limit(1)
+    .get()
 
-  for (let i = 0; i < total; i += MAX_LIMIT) {
-    const batch = await db.collection(PLAYER_STATS_COLLECTION)
-      .where({ gameId: gameId })
-      .skip(i)
-      .limit(MAX_LIMIT)
-      .get()
-    docs = docs.concat(batch.data || [])
-  }
-
-  return docs
+  if (!res.data || res.data.length === 0) return 0
+  return safeNumber(res.data[0].handNumber)
 }
 
-async function loadMatchByGameId(gameId) {
+async function loadMatchByGameId(gameId, options) {
+  const opts = options || {}
+  const allowFuzzy = opts.allowFuzzy === true
   const normalized = String(gameId || '').trim()
   if (!normalized) return null
 
   const exactRes = await db.collection('matches').where({ gameId: normalized }).limit(1).get()
   if (exactRes.data && exactRes.data.length > 0) return exactRes.data[0]
+
+  // 输入可能是 matches 的文档 _id，优先走主键读取避免全表扫描。
+  try {
+    const docRes = await db.collection('matches').doc(normalized).get()
+    if (docRes && docRes.data) return docRes.data
+  } catch (e) {}
+
+  if (!allowFuzzy) return null
 
   const escaped = escapeRegExp(normalized)
   const fuzzyRes = await db.collection('matches').where({
@@ -255,63 +270,56 @@ async function loadMatchByGameId(gameId) {
   return null
 }
 
-function buildLedgerFallbackResults(gameId, ledgerMap, bindMap, userMap) {
-  const finalResults = []
-  const userStatsMap = {}
-  const allPlayerIds = Object.keys(ledgerMap || {})
+async function syncFactsToLatestHand(gameId) {
+  const rawLatest = await getLatestHandNumber('match_hands', gameId)
+  const factLatest = await getLatestHandNumber(FACT_COLLECTION, gameId)
+  let syncedCount = 0
 
-  allPlayerIds.forEach(pid => {
-    const ledger = ledgerMap[pid] || { name: pid, net: 0 }
-    const playerName = ledger.name || pid
-    const net = safeNumber(ledger.net)
-    const binding = bindMap[pid]
-    const emptyStats = buildDefaultStats(pid, playerName)
+  if (rawLatest <= 0) {
+    return {
+      rawLatest: 0,
+      factLatestBefore: factLatest,
+      factLatestAfter: factLatest,
+      syncedCount: 0
+    }
+  }
 
-    if (!binding || !binding.userId) {
-      finalResults.push(buildRecord(gameId, pid, playerName, net, emptyStats, [], false, '', []))
-      return
+  for (let handNo = Math.max(1, factLatest + 1); handNo <= rawLatest; handNo += 1) {
+    const etlRes = await cloud.callFunction({
+      name: 'match_hand_etl',
+      data: {
+        gameId: gameId,
+        handNumber: handNo
+      }
+    })
+
+    const etlResult = etlRes && etlRes.result ? etlRes.result : null
+    if (!etlResult || (etlResult.code !== 1 && etlResult.code !== 0)) {
+      const reason = etlResult && etlResult.msg ? etlResult.msg : '未知错误'
+      throw new Error('同步手牌失败 hand#' + handNo + ': ' + reason)
     }
 
-    const uid = binding.userId
-    const userInfo = userMap[uid] || {}
-    const finalAvatar = userInfo.avatarUrl || binding.avatarUrl || ''
-    const finalGejuId = userInfo.gejuId || '未知用户'
+    syncedCount += 1
+  }
 
-    if (!userStatsMap[uid]) {
-      userStatsMap[uid] = buildDefaultStats(uid, finalGejuId)
-      userStatsMap[uid].userId = uid
-      userStatsMap[uid].gejuId = finalGejuId
-      userStatsMap[uid].avatarUrl = finalAvatar
-      userStatsMap[uid].net = 0
-      userStatsMap[uid].relatedNames = []
-    }
-
-    const us = userStatsMap[uid]
-    us.net += net
-    if (us.relatedNames.indexOf(playerName) === -1) us.relatedNames.push(playerName)
-  })
-
-  Object.keys(userStatsMap).forEach(uid => {
-    const us = userStatsMap[uid]
-    finalResults.push(buildRecord(gameId, uid, us.gejuId, us.net, us, [], true, us.avatarUrl, us.relatedNames || []))
-  })
-
-  finalResults.sort((a, b) => safeNumber(b.net) - safeNumber(a.net))
-  return finalResults
-}
-
-function triggerEtlBackfill(gameId) {
-  cloud.callFunction({
+  // 再兜底刷新一次当前最新手，避免与爬虫写入并发时出现刚好错过一手。
+  await cloud.callFunction({
     name: 'match_hand_etl',
     data: {
       gameId: gameId,
-      maxRuntimeMs: 2200,
-      maxHandsPerRun: 12,
-      enableRelay: true
+      handNumber: rawLatest
     }
   }).catch(err => {
-    console.error('[match_analysis] ETL 补算触发失败:', err.message)
+    console.error('[match_analysis] 最新手补算失败 hand#' + rawLatest + ':', err.message)
   })
+
+  const factLatestAfter = await getLatestHandNumber(FACT_COLLECTION, gameId)
+  return {
+    rawLatest: rawLatest,
+    factLatestBefore: factLatest,
+    factLatestAfter: factLatestAfter,
+    syncedCount: syncedCount
+  }
 }
 
 async function persistMatchPlayerStats(gameId, finalResults, matchStatus, analysisSource) {
@@ -363,12 +371,18 @@ exports.main = async (event, context) => {
 
   try {
     // 1. 对局元数据 + ledger
-    const matchData = await loadMatchByGameId(normalizedGameId)
+    const matchData = await loadMatchByGameId(normalizedGameId, {
+      allowFuzzy: true
+    })
     if (!matchData) return { code: -1, msg: '对局不存在: ' + normalizedGameId }
 
     const gameId = String(matchData.gameId || normalizedGameId)
     const isEnded = matchData.status === '已结束'
     const playersInfos = (matchData.ledger && matchData.ledger.playersInfos) || {}
+
+    // 2. 强制追平到最新手牌，保证本次返回不是缓存结果。
+    const syncResult = await syncFactsToLatestHand(gameId)
+    console.log('[match_analysis] 最新手牌同步:', syncResult)
 
     const ledgerMap = {}
     Object.keys(playersInfos).forEach(key => {
@@ -379,7 +393,7 @@ exports.main = async (event, context) => {
       }
     })
 
-    // 2. 绑定数据（进行中强制隐藏）
+    // 3. 绑定数据（进行中强制隐藏）
     const bindRes = await db.collection('match_player_bindings').where({ gameId: gameId }).get()
     let bindings = bindRes.data || []
     if (!isEnded) bindings = []
@@ -409,64 +423,22 @@ exports.main = async (event, context) => {
       })
     }
 
-    // 3. 读取 ETL 基础表并聚合
+    // 4. 读取 ETL 基础表并聚合
     const handFacts = await loadMatchHandFacts(gameId)
-    const rawHandCountRes = await db.collection('match_hands').where({ gameId: gameId }).count()
-    const rawHandCount = rawHandCountRes.total || 0
+    const rawHandCount = safeNumber(syncResult.rawLatest)
 
     if (handFacts.length === 0 && rawHandCount > 0) {
-      triggerEtlBackfill(gameId)
-
-      const cachedStats = await loadPersistedMatchPlayerStats(gameId)
-      const cachedResults = (cachedStats || []).slice().sort((a, b) => safeNumber(b.net) - safeNumber(a.net))
-      const cachedHasDisplayValue = cachedResults.some(item => safeNumber(item.hands) > 0 || safeNumber(item.net) !== 0)
-
-      if (cachedHasDisplayValue) {
-        return {
-          code: 1,
-          msg: '基础统计补算中，已返回缓存结果',
-          data: cachedResults,
-          meta: {
-            source: PLAYER_STATS_COLLECTION,
-            handCount: 0,
-            rawHandCount: rawHandCount,
-            cached: true,
-            etlTriggered: true,
-            matchStatus: matchData.status || ''
-          }
-        }
-      }
-
-      const ledgerFallback = buildLedgerFallbackResults(gameId, ledgerMap, bindMap, userMap)
-      if (ledgerFallback.length > 0) {
-        const persistFallback = await persistMatchPlayerStats(gameId, ledgerFallback, matchData.status || '', 'ledger_fallback')
-        return {
-          code: 1,
-          msg: '基础统计补算中，已返回账单快照',
-          data: ledgerFallback,
-          meta: {
-            source: 'ledger_fallback',
-            handCount: 0,
-            rawHandCount: rawHandCount,
-            cached: false,
-            etlTriggered: true,
-            persisted: persistFallback,
-            matchStatus: matchData.status || ''
-          }
-        }
-      }
-
       return {
         code: 0,
-        msg: '基础统计未生成，且暂无可展示的账单数据',
+        msg: '手牌基础统计尚未就绪，请稍后重试',
         data: [],
         meta: {
           source: FACT_COLLECTION,
           handCount: 0,
           rawHandCount: rawHandCount,
           cached: false,
-          etlTriggered: true,
-          matchStatus: matchData.status || ''
+          matchStatus: matchData.status || '',
+          latestSync: syncResult
         }
       }
     }
@@ -544,6 +516,10 @@ exports.main = async (event, context) => {
           holeCards: sd.holeCards || [],
           rangeKey: sd.rangeKey || '',
           rangeTier: sd.rangeTier || '',
+          rangeLabel: sd.rangeLabel || '',
+          rangePercent: typeof sd.rangePercent === 'number' ? sd.rangePercent : null,
+          rangeEquity: typeof sd.rangeEquity === 'number' ? sd.rangeEquity : null,
+          comboCount: typeof sd.comboCount === 'number' ? sd.comboCount : null,
           flopHandType: sd.flopHandType || '',
           flopSpr: sd.flopSpr,
           flopAction: sd.flopAction || '',
@@ -572,7 +548,8 @@ exports.main = async (event, context) => {
           handCount: handFacts.length,
           rawHandCount: rawHandCount,
           parsedHands: parsedHands,
-          matchStatus: matchData.status || ''
+          matchStatus: matchData.status || '',
+          latestSync: syncResult
         }
       }
     }
@@ -687,6 +664,7 @@ exports.main = async (event, context) => {
     // 6. 返回
     finalResults.sort((a, b) => safeNumber(b.net) - safeNumber(a.net))
     const persistResult = await persistMatchPlayerStats(gameId, finalResults, matchData.status || '', FACT_COLLECTION)
+    console.log('[match_analysis] 分析完成:', gameId, 'handFacts:', handFacts.length, 'players:', finalResults.length)
 
     return {
       code: 1,
@@ -698,11 +676,12 @@ exports.main = async (event, context) => {
         rawHandCount: rawHandCount,
         parsedHands: parsedHands,
         matchStatus: matchData.status || '',
+        latestSync: syncResult,
         persisted: persistResult
       }
     }
   } catch (e) {
-    console.error('[match_analysis] 失败:', e)
+    console.error('[match_analysis] 失败:', normalizedGameId, e)
     return { code: -1, msg: '分析失败: ' + e.message }
   }
 }
