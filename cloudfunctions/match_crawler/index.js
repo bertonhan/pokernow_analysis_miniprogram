@@ -110,6 +110,17 @@ exports.main = async (event, context) => {
 
         // === 关键修改：如果手牌结束，顺便获取账单 ===
         if (hasEnded) {
+          // 先触发单手 ETL，避免详情页实时重算
+          try {
+            await cloud.callFunction({
+              name: 'match_hand_etl',
+              data: { gameId: gameId, handNumber: handNumber }
+            })
+          } catch (etlErr) {
+            // ETL 异常不阻塞主爬虫流程
+            console.error(`[ETL] Hand #${handNumber} 计算失败:`, etlErr.message)
+          }
+
           console.log(`Hand #${handNumber} 结束 -> 正在同步账单...`)
           
           // 1. 尝试获取最新账单 (并行执行，不等待太久)

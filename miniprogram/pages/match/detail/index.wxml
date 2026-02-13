@@ -28,7 +28,7 @@ module.exports.getTagClass = getTagClass;
     <view class="info-block">
       <view class="info-row">
         <text class="label">对局 ID</text>
-        <text class="value id-text" selectable="true">{{matchInfo.gameId}}</text>
+        <text class="value id-text selectable-text">{{matchInfo.gameId}}</text>
       </view>
       <view class="info-row">
         <text class="label">当前手牌</text>
@@ -66,7 +66,7 @@ module.exports.getTagClass = getTagClass;
       <text>AI 正在分析牌局...</text>
     </view>
 
-    <block wx:for="{{statsList}}" wx:key="_id">
+    <block wx:for="{{statsList}}" wx:key="playerId">
       <view class="player-card {{item.isUser ? 'is-user-card' : ''}} {{(matchInfo.status === '已结束' && item.rank <= 3) ? 'rank-card-' + item.rank : ''}}">
         <view wx:if="{{matchInfo.status === '已结束' && item.rank <= 3}}" class="rank-edge"></view>
         <view wx:if="{{matchInfo.status === '已结束' && item.rank <= 3}}" class="rank-sheen"></view>

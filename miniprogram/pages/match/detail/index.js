@@ -45,18 +45,31 @@ Page({
       data: { gameId: gameId },
       success: res => {
         this.setData({ analyzing: false })
-        if (res.result.code === 1) {
-          const sortedList = this.processStats(res.result.data);
+        const result = (res && res.result) || {}
+        const list = Array.isArray(result.data) ? result.data : []
+
+        if (result.code === 1) {
+          const sortedList = this.processStats(list);
           this.setData({ statsList: sortedList })
           
           // 【新增】数据回来后，检查改名权限
           app.getOpenId(() => {
             this.checkRenamePermission(sortedList)
           })
+          return
+        }
+
+        // 非成功码时，仍尝试渲染可用数据，并提示原因
+        const sortedList = this.processStats(list)
+        this.setData({ statsList: sortedList })
+        if (result.msg) {
+          wx.showToast({ title: result.msg, icon: 'none' })
         }
       },
       fail: err => {
+        console.error('[match_detail] match_analysis 调用失败:', err)
         this.setData({ analyzing: false })
+        wx.showToast({ title: '分析请求失败', icon: 'none' })
       }
     })
   },

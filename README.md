@@ -68,6 +68,8 @@
 ├── cloudfunctions/          # 云函数目录
 │   ├── match_manager/       # 对局管理（创建、删除、改名、状态切换）
 │   ├── match_analysis/      # 核心分析逻辑（日志解析、数据聚合）
+│   ├── match_analysis_batch/ # 批量触发 match_analysis（分片+接力）
+│   ├── match_hand_etl/      # 手牌清洗 ETL（基础指标、位置、SPR、摊牌明细）
 │   ├── match_bind_tool/     # 身份绑定工具
 │   └── match_crawler/       # 日志爬虫（推测）
 ├── miniprogram/             # 小程序前端代码
@@ -108,13 +110,14 @@ git clone https://github.com/your-username/pokernow-analysis.git
 
 
 4. **部署云函数**：
-* 右键点击 `cloudfunctions` 下的每个文件夹（如 `match_analysis`），选择“上传并部署：云端安装依赖”。
+* 右键点击 `cloudfunctions` 下的每个文件夹（如 `match_analysis`、`match_analysis_batch`、`match_hand_etl`），选择“上传并部署：云端安装依赖”。
 
 
 5. **初始化数据库**：
 在云开发控制台中创建以下集合（Collection）：
 * `matches` (存储对局元数据)
 * `match_hands` (存储手牌日志)
+* `match_hand_facts` (手牌基础统计 ETL 结果，供 match_analysis 聚合查询)
 * `match_player_bindings` (存储绑定关系)
 * `users` (存储用户信息)
 
@@ -173,6 +176,27 @@ git clone https://github.com/your-username/pokernow-analysis.git
 4. 新建 Pull Request
 
 ---
+
+### 批量分析（可选）
+
+使用云函数 `match_analysis_batch` 可批量触发多个对局分析，并自动分片接力，避免超时。
+
+测试参数示例：
+
+```json
+{
+  "gameIds": [
+    "pglgTWapc3ONWCFhWPuoCyzgK",
+    "your_game_id_2",
+    "your_game_id_3"
+  ],
+  "maxPerRun": 1,
+  "maxRuntimeMs": 1200,
+  "awaitAnalysis": false
+}
+```
+
+返回 `msg` 为“批量分析进行中，已触发接力”属于正常状态；稍后可再次查询对应对局在 `match_player_stats` 的写入结果。
 
 ## 📄 License
 

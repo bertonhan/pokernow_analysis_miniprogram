@@ -139,6 +139,14 @@ exports.main = async (event, context) => {
       // 执行更新
       const res = await db.collection('matches').where({ gameId: gameId }).update({ data: updateData })
       console.log('>>> 更新结果:', res)
+
+      // 兜底补算一次全部手牌 ETL，确保详情页读取的是基础表
+      cloud.callFunction({
+        name: 'match_hand_etl',
+        data: { gameId: gameId }
+      }).catch(err => {
+        console.error('>>> [ETL Backfill] 触发失败:', err.message)
+      })
       
       return { code: 1, msg: '操作成功' }
     } catch (e) {
