@@ -210,6 +210,22 @@ function parseStructuredStacks(log) {
   return stacks
 }
 
+function parsePlayerStacksLine(msg) {
+  const text = String(msg || '')
+  if (!/player\s*stacks?/i.test(text)) return {}
+
+  const stacks = {}
+  const regex = /"(.*?)"\s*\(([^)]+)\)/g
+  let match = regex.exec(text)
+  while (match) {
+    const info = parsePlayerInfo(match[1])
+    const amount = toNumber(match[2])
+    if (info && info.id && amount !== null) stacks[info.id] = amount
+    match = regex.exec(text)
+  }
+  return stacks
+}
+
 function getStreetActionStore(store, playerId) {
   if (!store[playerId]) {
     store[playerId] = {
@@ -485,6 +501,7 @@ function buildHandFact(gameId, handNumber, logs) {
   const foldedPlayers = {}
   const collectedPlayers = {}
   const allInPlayers = {}
+  const allInStreetMap = {}
   const showCardsMap = {}
   const startingStacks = {}
   const contributions = {}
@@ -549,8 +566,11 @@ function buildHandFact(gameId, handNumber, logs) {
     if (!node.pot || node.pot <= 0) return
 
     let effectiveRemain = null
+    const activePlayerIds = []
+    const missingStackPlayerIds = []
     Object.keys(activePlayers).forEach(pid => {
       if (!activePlayers[pid]) return
+      activePlayerIds.push(pid)
       const stack = startingStacks[pid]
       if (typeof stack === 'number' && stack > 0) {
         const remain = Math.max(stack - (contributions[pid] || 0), 0)
@@ -558,11 +578,33 @@ function buildHandFact(gameId, handNumber, logs) {
         if (effectiveRemain === null || remain < effectiveRemain) effectiveRemain = remain
       } else {
         node.players[pid] = null
+        missingStackPlayerIds.push(pid)
       }
     })
 
     if (effectiveRemain !== null) {
       node.table = round(effectiveRemain / node.pot, 2)
+    } else {
+      console.warn('[match_hand_etl][SPR] 当前街未计算出有效桌面SPR', {
+        gameId: gameId,
+        handNumber: handNumber,
+        street: streetName,
+        pot: node.pot,
+        activePlayers: activePlayerIds.length,
+        missingStacks: missingStackPlayerIds
+      })
+    }
+
+    if (missingStackPlayerIds.length > 0) {
+      console.warn('[match_hand_etl][SPR] 部分活跃玩家缺少起始筹码，SPR 可能为 null', {
+        gameId: gameId,
+        handNumber: handNumber,
+        street: streetName,
+        pot: node.pot,
+        parsedStacks: Object.keys(startingStacks).length,
+        activePlayers: activePlayerIds.length,
+        missingStacks: missingStackPlayerIds
+      })
     }
   }
 
@@ -573,6 +615,11 @@ function buildHandFact(gameId, handNumber, logs) {
     const structuredStacks = parseStructuredStacks(log)
     Object.keys(structuredStacks).forEach(pid => {
       startingStacks[pid] = structuredStacks[pid]
+    })
+
+    const inlineStacks = parsePlayerStacksLine(msg)
+    Object.keys(inlineStacks).forEach(pid => {
+      startingStacks[pid] = inlineStacks[pid]
     })
 
     const parsedButtonPid = parseButtonPlayer(msg)
@@ -637,7 +684,10 @@ function buildHandFact(gameId, handNumber, logs) {
       sawFlopSet[pid] = true
     }
     if (action === 'collected') collectedPlayers[pid] = true
-    if (actionData.isAllIn) allInPlayers[pid] = true
+    if (actionData.isAllIn) {
+      allInPlayers[pid] = true
+      if (!allInStreetMap[pid]) allInStreetMap[pid] = street
+    }
 
     if (action === 'folds') {
       foldedPlayers[pid] = true
@@ -794,6 +844,9 @@ function buildHandFact(gameId, handNumber, logs) {
     }
   })
 
+  const allInPlayerIds = Object.keys(allInPlayers)
+  const isAllInHand = allInPlayerIds.length > 0
+
   const showdownPlayers = []
   Object.keys(showCardsMap).forEach(pid => {
     const holeCards = showCardsMap[pid]
@@ -815,6 +868,9 @@ function buildHandFact(gameId, handNumber, logs) {
       rangePercent: rangeInfo.rangePercent,
       rangeEquity: rangeInfo.rangeEquity,
       comboCount: rangeInfo.comboCount,
+      allInHand: isAllInHand,
+      isAllInPlayer: !!allInPlayers[pid],
+      allInStreet: allInStreetMap[pid] || '',
       flopHandType: flopBoard.length >= 3 ? evaluateStreetHand(holeCards, flopBoard) : '',
       flopSpr: streetSpr.FLOP.players[pid] === undefined ? null : streetSpr.FLOP.players[pid],
       flopAction: playerActions[pid].FLOP.join(' -> '),
@@ -844,6 +900,8 @@ function buildHandFact(gameId, handNumber, logs) {
       river: streetSpr.RIVER
     },
     players: playerStats,
+    allInHand: isAllInHand,
+    allInPlayerIds: allInPlayerIds,
     showdownPlayers: showdownPlayers,
     updateTime: new Date()
   }

@@ -3,6 +3,10 @@ var getTagClass = function(tag) {
   var map = {
     '松': 'loose', '紧': 'tight', '凶': 'aggressive', '弱': 'passive',
     '跟注': 'station', '平衡': 'balance',
+    '松凶': 'aggressive', '紧凶': 'aggressive', '松弱': 'passive', '紧弱': 'passive',
+    'limper': 'station', '3bet压制': 'aggressive', '4bet战士': 'aggressive',
+    '持续施压': 'aggressive', '怕3bet': 'tight', '翻后保守': 'tight',
+    '翻后反击': 'aggressive', '剥削': 'balance',
     '欧皇': 'luck-god', '天选': 'luck-god', '跑马王': 'luck-king',
     '非酋': 'luck-bad', '倒霉': 'luck-bad', '慈善家': 'luck-sad'
   };

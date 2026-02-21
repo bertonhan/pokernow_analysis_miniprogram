@@ -1,203 +1,168 @@
-# 🃏 德扑格局 (Pokernow Analysis Miniprogram)
+# 德扑格局 (PokerNow Analysis Mini Program)
 
-> 专业的 PokerNow 对局记录、实时数据分析与复盘工具。
+基于微信小程序 + 云开发的德州扑克对局记录与复盘工具。  
+核心目标是把 PokerNow 日志转成可读、可比较、可复盘的选手数据。
 
-**德扑格局** 是一款基于微信小程序开发的德州扑克辅助工具，专为 PokerNow 玩家设计。它能够通过解析对局日志，实时生成高阶数据分析（VPIP/PFR/AF 等），识别玩家风格，并提供完善的隐私保护和身份绑定系统。
+## 1. 当前能力概览
 
----
+- 对局管理：创建、更新、结束、删除、冠军改名。
+- 对局分析：VPIP/PFR/AF、3bet、4bet、isolate、C-bet、SPR、位置分布等。
+- 摊牌记录：底牌、起手牌力分组（169 组）、各街牌型、各街 SPR、各街动作。
+- 标签系统：主风格 + 翻前策略 + 翻后策略 + 运气标签。
+- 隐私机制：进行中隐藏对手真实身份；结束后公开绑定关系用于复盘。
 
-## ✨ 核心功能
+## 2. 数据链路（本版本）
 
-### 1. 📊 深度数据分析
+1. `match_crawler` 拉取并写入 `match_hands` 原始日志。  
+2. `match_hand_etl` 将每手牌清洗到 `match_hand_facts`（基础事实表）。  
+3. `match_analysis` 从 `match_hand_facts` 聚合选手统计，返回详情页数据，并写回 `match_player_stats`。  
+4. 详情页 `pages/match/detail` 展示结果与标签。
 
-* **实时监控**：支持对局进行中实时更新数据。
-* **专业指标**：自动计算 VPIP, PFR, Limp, 3-Bet, C-Bet, AF (激进指数), WTSD (摊牌率), WSD (摊牌胜率) 等。
-* **风格标签**：根据打法自动生成标签（如“松凶”、“紧弱”、“跟注站”）。
-* **运气评价**：基于 EV 和实际盈亏的趣味标签（如“欧皇”、“跑马王”、“慈善家”）。
+设计目标：把重计算前置到 ETL，详情页分析仅做聚合，降低实时开销。
 
-### 2. 🔒 动态隐私保护机制
+## 3. 标签体系（当前线上代码）
 
-* **进行中 (防作弊)**：
-* 自动隐藏所有对手的真实 ID 和头像，仅显示游戏内昵称。
-* 用户只能看到自己绑定的身份信息，防止场外针对。
+说明：同一名选手可同时命中多个标签。
 
+### 3.1 主风格标签
 
-* **已结束 (复盘)**：
-* 对局结束后自动公开所有绑定关系，展示真实头像和“格局ID”，便于复盘交流。
-* 前三名玩家获得专属的 **金/银/铜** 荣誉卡片样式 。
+- `松凶`：`hands >= 10`，`vpip >= 33%`，且翻前主动度高（`pfr >= 16%` 且 `pfr/vpip >= 0.45`）。
+- `松弱`：`hands >= 10`，`vpip >= 33%`，但翻前主动度不足。
+- `紧凶`：`hands >= 10`，`vpip <= 22%`，且翻前主动度高。
+- `紧弱`：`hands >= 10`，`vpip <= 22%`，且翻前主动度不足。
+- `平衡`：未命中任何其他标签时兜底。
 
+### 3.2 翻前策略标签
 
+- `limper`：`hands >= 12`，且同时满足：
+  - `vpip >= 28%`
+  - `limp >= 10%`
+  - `limpRate >= pfrRate * 0.8`
+  - `limpHands >= 3`
+- `3bet压制`：`bet3Opp >= 5` 且 `3bet频率 >= 14%`。
+- `4bet战士`：`bet4Opp >= 3` 且 `4bet频率 >= 16%`。
+- `剥削`：`isolateOpp >= 4` 且 `isolate频率 >= 30%`。
+- `怕3bet`：`foldTo3BetOpp >= 4` 且 `foldTo3Bet >= 62%`。
 
+### 3.3 翻后策略标签
 
+- `持续施压`：`cbetOpp >= 5` 且 `cbet频率 >= 62%`。
+- `翻后保守`：`foldToFlopCbetOpp >= 4` 且 `foldToFlopCbet >= 62%`。
+- `翻后反击`：`raiseVsFlopCbetOpp >= 4` 且 `raiseVsFlopCbet >= 22%`。
+- `激进`：`AF >= 2.8`。
+- `跟注`：`0 < AF < 0.9`。
 
-### 3. 🆔 身份绑定系统
+### 3.4 运气标签（方案 2）
 
-* **认领机制**：玩家可在列表中认领自己在 PokerNow 中的位置。
-* 
-**多账号聚合**：支持将多个 PokerNow 临时昵称的数据聚合到同一个“格局ID”下，计算累计战绩 。
+核心思路：比较“翻前权益预期”与“实际输赢”。
 
+- `luckExpectedWins`：按摊牌玩家 `rangeEquity` 归一化后得到的预期胜局。
+- `luckActualWins`：实际胜局（摊牌赢记 1，输记 0）。
+- `luckDiff = luckActualWins - luckExpectedWins`。
 
+触发条件（一般需 `luckHands >= 4`）：
 
-### 4. 🏆 赢家特权 & 社交
+- `天选`：`luckDiff >= 0.9`，或 `luckAllInDogWins >= 2`。
+- `欧皇`：`luckDiff >= 0.45`，或 `luckGoodHits >= 2`。
+- `倒霉`：`luckDiff <= -0.9`，或 `luckAllInFavLoses >= 2`。
+- `非酋`：`luckDiff <= -0.45`，或 `luckBadBeats >= 2`。
+- `跑马王`：`luckAllInDogWins >= 2`。
+- `慈善家`（新版定义）：
+  - 牌力落后（`equity <= 40%` 或与当手最高权益差距 `>= 8%`）；
+  - 且主动进攻（`bets/raises/all-in`）；
+  - 且最终输掉；
+  - 聚合后满足 `charityAttempts >= 2`、`charityFails >= 2`、`charityRate >= 0.7`。
 
-* **冠军命名权**：对局结束后的**第一名**（且未修改过名称）拥有一次修改对局名称的特权，系统自动添加日期前缀（如 `2.9 决战紫禁之巅`）。
-* **一键晒战绩**：支持一键复制整局战绩到剪贴板，格式优化适配微信群分享。
-
-### 5. 🛠 管理员功能
-
-* **对局管理**：通过粘贴 PokerNow 链接一键创建对局。
-* 
-**状态控制**：支持 记录中 / 已暂停 / 已结束 / 更新数据 / 删除对局 。
-
-
-
----
-
-## 🏗 技术栈
-
-* **前端**：微信小程序原生开发 (WXML, WXSS, JS, JSON)
-* **后端**：微信云开发 (WeChat Cloud Development)
-* **数据库**：云数据库 (NoSQL)
-* **计算层**：云函数 (Node.js) 用于日志爬取、解析与数据聚合
-
----
-
-## 📂 目录结构
+## 4. 目录结构
 
 ```text
-├── cloudfunctions/          # 云函数目录
-│   ├── match_manager/       # 对局管理（创建、删除、改名、状态切换）
-│   ├── match_analysis/      # 核心分析逻辑（日志解析、数据聚合）
-│   ├── match_analysis_batch/ # 批量触发 match_analysis（分片+接力）
-│   ├── match_hand_etl/      # 手牌清洗 ETL（基础指标、位置、SPR、摊牌明细）
-│   ├── match_bind_tool/     # 身份绑定工具
-│   └── match_crawler/       # 日志爬虫（推测）
-├── miniprogram/             # 小程序前端代码
-│   ├── pages/
-│   │   ├── match/
-│   │   │   ├── list/        # 首页/对局列表
-│   │   │   ├── detail/      # 战绩详情页（核心分析页）
-│   │   │   └── bind/        # 选手身份绑定页
-│   ├── app.js               # 全局逻辑（登录、OpenID获取）
-│   └── app.wxss             # 全局样式
-└── project.config.json      # 项目配置文件
+cloudfunctions/
+  login/
+  user_manager/
+  match_manager/
+  match_bind_tool/
+  match_crawler/
+  match_hand_etl/
+  match_hand_etl_batch/
+  match_analysis/
+  match_analysis_batch/
 
+miniprogram/
+  pages/match/list/
+  pages/match/detail/
+  pages/match/bind/
+  app.js
 ```
 
----
+## 5. 数据集合
 
-## 🚀 部署指南
+- `matches`：对局元数据与 ledger。
+- `match_hands`：原始手牌日志（raw_logs）。
+- `match_hand_facts`：ETL 后的每手事实数据。
+- `match_player_bindings`：选手与用户绑定关系。
+- `match_player_stats`：`match_analysis` 聚合并写回的结果。
+- `users`：用户资料（含 gejuId、头像等）。
 
-### 前置条件
+## 6. 本地开发与部署
 
-1. 注册微信小程序账号。
-2. 开通“云开发”环境。
+1. 用微信开发者工具导入项目根目录。  
+2. 在 `miniprogram/app.js` 配置云环境 ID。  
+3. 对改动过的云函数执行“上传并部署：云端安装依赖”。  
+4. 重新编译小程序并验证详情页。
 
-### 步骤
+## 7. 常用手动操作
 
-1. **克隆代码**：
-```bash
-git clone https://github.com/your-username/pokernow-analysis.git
+### 7.1 单局全量 ETL（推荐分片接力）
 
-```
-
-
-2. **导入项目**：
-使用“微信开发者工具”导入项目根目录，填写你的 AppID。
-3. **配置云环境**：
-* 在 `miniprogram/app.js` 中配置你的云环境 ID (`env`).
-* 在 `cloudfunctions` 目录下每个函数的 `index.js` 中确认环境配置。
-
-
-4. **部署云函数**：
-* 右键点击 `cloudfunctions` 下的每个文件夹（如 `match_analysis`、`match_analysis_batch`、`match_hand_etl`），选择“上传并部署：云端安装依赖”。
-
-
-5. **初始化数据库**：
-在云开发控制台中创建以下集合（Collection）：
-* `matches` (存储对局元数据)
-* `match_hands` (存储手牌日志)
-* `match_hand_facts` (手牌基础统计 ETL 结果，供 match_analysis 聚合查询)
-* `match_player_bindings` (存储绑定关系)
-* `users` (存储用户信息)
-
-
-
----
-
-## 📖 使用说明
-
-### 1. 创建对局
-
-* 在首页顶部输入框粘贴 PokerNow 的 Game Log 链接（通常以 `pokernow.club/games/...` 开头）。
-* 点击“新建”按钮。
-
-### 2. 绑定身份
-
-* 点击对局卡片上的 **“绑定”** 按钮。
-* 在列表中找到你使用的昵称，点击 **“认领”**。
-* *注意：对局进行中，你只能看到自己的绑定状态；对局结束后可查看所有人。*
-
-### 3. 查看分析
-
-* 点击 **“详情”** 进入分析页。
-* 顶部查看对局基础信息（ID、当前手数）。
-* 列表按盈利排序，展示详细数据（VPIP, PFR 等）。
-* **复制战绩**：对局结束后，点击标题旁的“复制”图标 ，即可将战绩文本粘贴到微信群。
-
-### 4. 重命名对局（彩蛋）
-
-* 条件：对局状态为【已结束】 + 你是【盈利榜第一名】 + 该对局【未重命名过】。
-* 操作：点击标题旁的“编辑”图标
-
-
-，输入新名称并保存。
-
----
-
-## 🎨 UI 设计亮点
-
-* **质感卡片**：采用 Material Design 风格，结合微渐变和阴影。
-* 
-**荣誉榜单**：前三名拥有专属的 **流光金、亮银、红铜** 金属质感卡片背景及斜向高光特效 。
-
-
-* **沉浸式头部**：详情页和绑定页采用全宽头部设计，信息展示更清晰。
-
----
-
-## 🤝 贡献
-
-欢迎提交 Issue 或 Pull Request 来改进本项目！
-
-1. Fork 本仓库
-2. 新建 Feat_xxx 分支
-3. 提交代码
-4. 新建 Pull Request
-
----
-
-### 批量分析（可选）
-
-使用云函数 `match_analysis_batch` 可批量触发多个对局分析，并自动分片接力，避免超时。
-
-测试参数示例：
+在云函数 `match_hand_etl` 测试参数中传：
 
 ```json
 {
-  "gameIds": [
-    "pglgTWapc3ONWCFhWPuoCyzgK",
-    "your_game_id_2",
-    "your_game_id_3"
-  ],
+  "gameId": "你的gameId",
+  "startOffset": 0,
+  "maxRuntimeMs": 2200,
+  "maxHandsPerRun": 12,
+  "enableRelay": true
+}
+```
+
+返回 `msg = "分片 ETL 进行中，已触发接力"` 表示正常。  
+等待接力完成后，可再次调用确认 `data.done = true`。
+
+### 7.2 单局分析
+
+调用 `match_analysis`：
+
+```json
+{
+  "gameId": "你的gameId"
+}
+```
+
+成功后会返回 `data`（选手卡片数据），并写回 `match_player_stats`。
+
+### 7.3 批量分析
+
+调用 `match_analysis_batch`：
+
+```json
+{
+  "gameIds": ["gameId1", "gameId2", "gameId3"],
   "maxPerRun": 1,
   "maxRuntimeMs": 1200,
   "awaitAnalysis": false
 }
 ```
 
-返回 `msg` 为“批量分析进行中，已触发接力”属于正常状态；稍后可再次查询对应对局在 `match_player_stats` 的写入结果。
+返回“已触发接力”属于正常状态。
 
-## 📄 License
+## 8. 验收清单（微信开发者工具）
 
-MIT License.
+- 对局列表可正常展示，创建/结束/删除不报错。
+- 详情页可看到统计项与标签，且不出现“暂无数据”异常。
+- 对局结束后，绑定关系与头像按规则显示。
+- 手动触发 `match_analysis` 后，`match_player_stats` 有对应写入。
+
+## 9. License
+
+MIT

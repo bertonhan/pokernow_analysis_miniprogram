@@ -46,6 +46,16 @@ function addShowdownSample(targetList, sample, max) {
   targetList.push(sample)
 }
 
+function hasAggressiveAction(actionText) {
+  const text = String(actionText || '')
+  return /\b(raises|bets)\b/i.test(text)
+}
+
+function pushTag(styles, tag) {
+  if (!tag) return
+  if (styles.indexOf(tag) === -1) styles.push(tag)
+}
+
 function buildDefaultStats(pid, name) {
   return {
     id: pid,
@@ -85,8 +95,80 @@ function buildDefaultStats(pid, name) {
     sprRiverSum: 0,
     sprRiverCnt: 0,
     positionCount: {},
-    showdownSamples: []
+    showdownSamples: [],
+    luckHands: 0,
+    luckExpectedWins: 0,
+    luckActualWins: 0,
+    luckGoodHits: 0,
+    luckBadBeats: 0,
+    luckAllInDogWins: 0,
+    luckAllInFavLoses: 0,
+    charityAttempts: 0,
+    charityFails: 0
   }
+}
+
+function accumulateLuckStats(statsMap, handDoc) {
+  const showdownPlayers = Array.isArray(handDoc.showdownPlayers) ? handDoc.showdownPlayers : []
+  if (showdownPlayers.length < 2) return
+
+  const showdownWinMap = {}
+  ;(handDoc.players || []).forEach(player => {
+    if (!player || !player.playerId) return
+    showdownWinMap[player.playerId] = safeNumber(player.showdownWins) > 0
+  })
+
+  const entries = showdownPlayers.map(sd => {
+    if (!sd || !sd.playerId || !statsMap[sd.playerId]) return null
+    const eq = safeNumber(sd.rangeEquity)
+    if (eq <= 0) return null
+    return {
+      playerId: sd.playerId,
+      equity: Math.max(0, Math.min(eq, 100)),
+      won: !!showdownWinMap[sd.playerId],
+      allInHand: !!sd.allInHand,
+      isAllInPlayer: !!sd.isAllInPlayer,
+      flopAction: sd.flopAction || '',
+      turnAction: sd.turnAction || '',
+      riverAction: sd.riverAction || ''
+    }
+  }).filter(Boolean)
+
+  if (entries.length < 2) return
+
+  const sumEquity = entries.reduce((sum, one) => sum + one.equity, 0)
+  if (sumEquity <= 0) return
+
+  const maxEquity = entries.reduce((max, one) => Math.max(max, one.equity), 0)
+
+  entries.forEach(one => {
+    const stats = statsMap[one.playerId]
+    if (!stats) return
+
+    const expectedWin = one.equity / sumEquity
+    const actualWin = one.won ? 1 : 0
+    const equityGap = maxEquity - one.equity
+    const isBehind = one.equity <= 40 || equityGap >= 8
+    const isFavorite = one.equity >= 60 && equityGap <= 2
+    const isAggressiveMove = one.isAllInPlayer ||
+      hasAggressiveAction(one.flopAction) ||
+      hasAggressiveAction(one.turnAction) ||
+      hasAggressiveAction(one.riverAction)
+
+    stats.luckHands += 1
+    stats.luckExpectedWins += expectedWin
+    stats.luckActualWins += actualWin
+
+    if (one.won && isBehind) stats.luckGoodHits += 1
+    if (!one.won && isFavorite) stats.luckBadBeats += 1
+    if (one.allInHand && one.isAllInPlayer && one.won && isBehind) stats.luckAllInDogWins += 1
+    if (one.allInHand && one.isAllInPlayer && !one.won && isFavorite) stats.luckAllInFavLoses += 1
+
+    if (isBehind && isAggressiveMove) {
+      stats.charityAttempts += 1
+      if (!one.won) stats.charityFails += 1
+    }
+  })
 }
 
 function generateStyles(stats, net) {
@@ -94,45 +176,67 @@ function generateStyles(stats, net) {
 
   const vpip = ratio(stats.vpipHands, stats.hands)
   const pfr = ratio(stats.pfrHands, stats.hands)
+  const limpRate = ratio(stats.limpHands, stats.hands)
   const afBase = stats.calls || 0
   const afTop = (stats.bets || 0) + (stats.raises || 0)
   const af = afBase > 0 ? (afTop / afBase) : (afTop > 0 ? 10 : 0)
 
-  const wsd = ratio(stats.showdownWins, stats.showdowns)
-  const allInWinRate = ratio(stats.allInWins, stats.allInCnt)
-
+  const cbetFreq = ratio(stats.cbetCount, stats.cbetOpp)
+  const bet3Freq = ratio(stats.bet3Count, stats.bet3Opp)
   const foldTo3Bet = ratio(stats.foldTo3BetCount, stats.foldTo3BetOpp)
   const bet4Freq = ratio(stats.bet4Count, stats.bet4Opp)
   const isolateFreq = ratio(stats.isolateCount, stats.isolateOpp)
   const foldToFlopCbet = ratio(stats.foldToFlopCbetCount, stats.foldToFlopCbetOpp)
   const raiseVsFlopCbet = ratio(stats.raiseVsFlopCbetCount, stats.raiseVsFlopCbetOpp)
+  const pfrByVpip = vpip > 0 ? (pfr / vpip) : 0
+  const luckDiff = safeNumber(stats.luckActualWins) - safeNumber(stats.luckExpectedWins)
+  const charityRate = ratio(stats.charityFails, stats.charityAttempts)
 
-  if (vpip > 0.35) styles.push('松')
-  else if (vpip < 0.20) styles.push('紧')
+  // 主风格标签：重点保留“松弱/紧弱”的命名。
+  if (stats.hands >= 10) {
+    const isLoose = vpip >= 0.33
+    const isTight = vpip <= 0.22
+    const isAggressivePreflop = pfr >= 0.16 && pfrByVpip >= 0.45
+    if (isLoose) pushTag(styles, isAggressivePreflop ? '松凶' : '松弱')
+    else if (isTight) pushTag(styles, isAggressivePreflop ? '紧凶' : '紧弱')
+  }
 
-  if (pfr > 0.22) styles.push('凶')
-  else if (pfr < 0.10) styles.push('弱')
+  // 翻前策略
+  if (stats.hands >= 12 && vpip >= 0.28 && limpRate >= 0.10 && limpRate >= pfr * 0.8 && stats.limpHands >= 3) {
+    pushTag(styles, 'limper')
+  }
+  if (stats.bet3Opp >= 5 && bet3Freq >= 0.14) pushTag(styles, '3bet压制')
+  if (stats.bet4Opp >= 3 && bet4Freq >= 0.16) pushTag(styles, '4bet战士')
+  if (stats.isolateOpp >= 4 && isolateFreq >= 0.30) pushTag(styles, '剥削')
+  if (stats.foldTo3BetOpp >= 4 && foldTo3Bet >= 0.62) pushTag(styles, '怕3bet')
 
-  if (af > 2.2) styles.push('激进')
-  else if (af < 1.0) styles.push('跟注')
+  // 翻后策略
+  if (stats.cbetOpp >= 5 && cbetFreq >= 0.62) pushTag(styles, '持续施压')
+  if (stats.foldToFlopCbetOpp >= 4 && foldToFlopCbet >= 0.62) pushTag(styles, '翻后保守')
+  if (stats.raiseVsFlopCbetOpp >= 4 && raiseVsFlopCbet >= 0.22) pushTag(styles, '翻后反击')
+  if (af >= 2.8) pushTag(styles, '激进')
+  else if (af > 0 && af < 0.9) pushTag(styles, '跟注')
 
-  if (stats.foldTo3BetOpp >= 3 && foldTo3Bet >= 0.65) styles.push('怕3bet')
-  if (stats.bet4Opp >= 2 && bet4Freq >= 0.12) styles.push('反击')
-  if (stats.isolateOpp >= 3 && isolateFreq >= 0.30) styles.push('剥削')
+  // 运气标签（方案2）：基于“翻前权益 vs 结果差值”。
+  if (stats.luckHands >= 4) {
+    if (luckDiff >= 0.9 || stats.luckAllInDogWins >= 2) pushTag(styles, '天选')
+    else if (luckDiff >= 0.45 || stats.luckGoodHits >= 2) pushTag(styles, '欧皇')
 
-  if (stats.foldToFlopCbetOpp >= 3 && foldToFlopCbet >= 0.65) styles.push('翻后保守')
-  if (stats.raiseVsFlopCbetOpp >= 3 && raiseVsFlopCbet >= 0.20) styles.push('翻后反击')
+    if (luckDiff <= -0.9 || stats.luckAllInFavLoses >= 2) pushTag(styles, '倒霉')
+    else if (luckDiff <= -0.45 || stats.luckBadBeats >= 2) pushTag(styles, '非酋')
+  }
 
-  if (wsd >= 0.60 && stats.showdowns >= 3) styles.push('欧皇')
-  else if (wsd <= 0.30 && stats.showdowns >= 3) styles.push('非酋')
+  if (stats.luckAllInDogWins >= 2) pushTag(styles, '跑马王')
 
-  if (allInWinRate >= 0.75 && stats.allInCnt >= 2) styles.push('跑马王')
-  else if (allInWinRate <= 0.25 && stats.allInCnt >= 2) styles.push('慈善家')
+  // 慈善家：牌力落后时主动进攻（加注/下注/all-in）且最终输掉。
+  if (stats.charityAttempts >= 2 && stats.charityFails >= 2 && charityRate >= 0.7) {
+    pushTag(styles, '慈善家')
+  }
 
-  if (vpip > 0.40 && net > 5000) styles.push('天选')
-  if (vpip < 0.30 && net < -5000) styles.push('倒霉')
+  if (vpip > 0.40 && net > 5000) pushTag(styles, '天选')
+  if (vpip < 0.30 && net < -5000) pushTag(styles, '倒霉')
 
-  if (styles.length === 0) styles.push('平衡')
+  if (styles.length === 0) pushTag(styles, '平衡')
   return styles
 }
 
@@ -520,6 +624,9 @@ exports.main = async (event, context) => {
           rangePercent: typeof sd.rangePercent === 'number' ? sd.rangePercent : null,
           rangeEquity: typeof sd.rangeEquity === 'number' ? sd.rangeEquity : null,
           comboCount: typeof sd.comboCount === 'number' ? sd.comboCount : null,
+          allInHand: !!sd.allInHand,
+          isAllInPlayer: !!sd.isAllInPlayer,
+          allInStreet: sd.allInStreet || '',
           flopHandType: sd.flopHandType || '',
           flopSpr: sd.flopSpr,
           flopAction: sd.flopAction || '',
@@ -531,6 +638,8 @@ exports.main = async (event, context) => {
           riverAction: sd.riverAction || ''
         }, 8)
       })
+
+      accumulateLuckStats(statsMap, handDoc)
     })
 
     let parsedHands = 0
@@ -627,6 +736,15 @@ exports.main = async (event, context) => {
       us.sprRiverSum += stats.sprRiverSum
       us.sprRiverCnt += stats.sprRiverCnt
       us.positionCount = mergePositionCount(us.positionCount, stats.positionCount)
+      us.luckHands += stats.luckHands
+      us.luckExpectedWins += stats.luckExpectedWins
+      us.luckActualWins += stats.luckActualWins
+      us.luckGoodHits += stats.luckGoodHits
+      us.luckBadBeats += stats.luckBadBeats
+      us.luckAllInDogWins += stats.luckAllInDogWins
+      us.luckAllInFavLoses += stats.luckAllInFavLoses
+      us.charityAttempts += stats.charityAttempts
+      us.charityFails += stats.charityFails
 
       if (us.relatedNames.indexOf(ledger.name) === -1) us.relatedNames.push(ledger.name)
 
