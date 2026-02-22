@@ -1,44 +1,63 @@
-<view class="container">
-  
-  <view class="login-card" wx:if="{{!isLoggedIn && !showLoginForm}}">
-    <view class="welcome-text">欢迎来到德扑格局</view>
-    <view class="sub-text">登录后记录你的对局生涯</view>
-    <button class="login-btn-entry" type="primary" bindtap="onTapLogin">登录</button>
-  </view>
-
-  <view class="profile-card" wx:if="{{showLoginForm}}">
-    <view class="title">{{isEditing ? '修改档案' : '完善资料'}}</view>
-    
-    <button class="avatar-wrapper" open-type="chooseAvatar" bind:chooseavatar="onChooseAvatar">
-      <image class="avatar" src="{{tempAvatarUrl || defaultAvatar}}"></image>
-      <view class="tip">点击授权头像</view>
-    </button>
-
-    <view class="form-group">
-      <view class="input-row">
-        <text class="label">昵称</text>
-        <input type="nickname" class="input" placeholder="点击自动填入微信昵称" value="{{nickName}}" bindblur="onNicknameChange" bindinput="onNicknameInput" />
-      </view>
-      
-      <view class="input-row">
-        <text class="label">格局ID</text>
-        <input class="input" placeholder="设置你的专属ID" value="{{gejuId}}" bindinput="onGejuIdChange" />
-      </view>
+<view class="page-wrap">
+  <view class="container">
+    <view class="card login-card" wx:if="{{!isLoggedIn && !showLoginForm}}">
+      <view class="card-title">欢迎来到德扑格局</view>
+      <view class="card-desc">登录后可同步个人档案，并在复盘时展示统一身份。</view>
+      <button class="btn-primary" bindtap="onTapLogin">登录</button>
+      <view class="hint-text">对局进行中将自动隐藏对手真实身份</view>
     </view>
 
-    <button class="save-btn" type="primary" bindtap="confirmLogin">确认保存</button>
-    <button class="cancel-btn" bindtap="cancelLogin">取消</button>
-  </view>
+    <view class="card form-card" wx:if="{{showLoginForm}}">
+      <view class="card-title">{{isEditing ? '修改档案' : '完善资料'}}</view>
 
-  <view class="profile-card success" wx:if="{{isLoggedIn && !showLoginForm}}">
-    <image class="avatar-large" src="{{userInfo.avatarUrl}}"></image>
-    <view class="user-name">{{userInfo.nickName}}</view>
-    <view class="user-id">格局ID: {{userInfo.gejuId}}</view>
-    
-    <view class="action-area">
-      <button class="action-btn outline" bindtap="onTapEdit">修改档案</button>
-      <button class="action-btn danger" bindtap="onTapLogout">退出登录</button>
+      <button class="avatar-wrapper" open-type="chooseAvatar" bind:chooseavatar="onChooseAvatar">
+        <image class="avatar" src="{{tempAvatarUrl || defaultAvatar}}"></image>
+        <view class="avatar-tip">点击授权头像</view>
+      </button>
+
+      <view class="form-group">
+        <view class="input-row">
+          <text class="label">昵称</text>
+          <input
+            type="nickname"
+            class="input"
+            placeholder="点击自动填入微信昵称"
+            value="{{nickName}}"
+            bindblur="onNicknameChange"
+            bindinput="onNicknameInput"
+          />
+        </view>
+
+        <view class="input-row">
+          <text class="label">格局ID</text>
+          <input
+            class="input"
+            placeholder="设置你的专属ID"
+            value="{{gejuId}}"
+            bindinput="onGejuIdChange"
+          />
+        </view>
+      </view>
+
+      <view class="hint-text">格局ID会在对局结束后的复盘页显示</view>
+      <button class="btn-primary" bindtap="confirmLogin">确认保存</button>
+      <button class="btn-default" bindtap="cancelLogin">取消</button>
+    </view>
+
+    <view class="card profile-card" wx:if="{{isLoggedIn && !showLoginForm}}">
+      <image class="avatar-large" src="{{userInfo.avatarUrl}}"></image>
+      <view class="user-name">{{userInfo.nickName}}</view>
+      <view class="user-id">格局ID：{{userInfo.gejuId}}</view>
+
+      <view class="notice-box">
+        <view class="notice-title">隐私说明</view>
+        <view class="notice-content">进行中仅显示游戏昵称；结束后显示绑定关系用于复盘。</view>
+      </view>
+
+      <view class="action-area">
+        <button class="btn-default" bindtap="onTapEdit">修改档案</button>
+        <button class="btn-danger" bindtap="onTapLogout">退出登录</button>
+      </view>
     </view>
   </view>
-
 </view>

@@ -1,4 +1,6 @@
 /**app.wxss**/
+@import "styles/design-tokens.wxss";
+
 .container {
   display: flex;
   flex-direction: column;
@@ -20,7 +22,9 @@ button::after{
 
 
 page {
-  background: #f6f6f6;
+  background: linear-gradient(180deg, var(--bg-1) 0%, var(--bg-2) 34%, var(--bg-3) 100%);
+  color: var(--ink-base);
+  font-family: var(--font-body);
   display: flex;
   flex-direction: column;
   justify-content: flex-start;

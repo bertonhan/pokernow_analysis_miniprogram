@@ -7,7 +7,7 @@
     </view>
 
     <view class="status-banner {{matchStatus === '已结束' ? 'ended' : 'ongoing'}}">
-      <icon type="{{matchStatus === '已结束' ? 'info' : 'warn'}}" size="14" color="{{matchStatus === '已结束' ? '#999' : '#fa8c16'}}"></icon>
+      <icon type="{{matchStatus === '已结束' ? 'info' : 'warn'}}" size="14" color="{{matchStatus === '已结束' ? '#5f6e84' : '#b4650c'}}"></icon>
       <text wx:if="{{matchStatus === '已结束'}}">对局已结束，身份完全公开</text>
       <text wx:else>对局进行中，已隐藏对手身份</text>
     </view>

@@ -4,14 +4,14 @@
   left: 0;
   right: 0;
   height: 80rpx; /* 整体高度，默认是100rpx，改高一点容纳大字 */
-  background: white;
+  background: #ffffff;
   display: flex;
   padding-bottom: env(safe-area-inset-bottom);
-  box-shadow: 0 -2rpx 10rpx rgba(0,0,0,0.05); /* 加点阴影好看 */
+  box-shadow: 0 -4rpx 12rpx rgba(21, 54, 104, 0.05);
 }
 
 .tab-bar-border {
-  background-color: rgba(0, 0, 0, 0.33);
+  background-color: rgba(168, 184, 205, 0.5);
   position: absolute;
   left: 0;
   top: 0;
@@ -32,11 +32,11 @@
 .tab-bar-item cover-image {
   width: 54rpx; /* 图标大小 */
   height: 54rpx;
-  margin-bottom: 6rpx;
+  margin-bottom: calc(var(--space-s, 8rpx) * 0.75);
 }
 
 .tab-bar-item cover-view {
   /* === 这里调整字体大小 === */
-  font-size: 24rpx; /* 原生大概是 20rpx 左右，这里改大到 24rpx */
-  font-weight: bold; /* 还可以加粗 */
+  font-size: var(--fz-4, 24rpx); /* 原生大概是 20rpx 左右，这里改大到 24rpx */
+  font-weight: 600;
 }

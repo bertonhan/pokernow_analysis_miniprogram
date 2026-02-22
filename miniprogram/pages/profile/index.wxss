@@ -1,66 +1,57 @@
 /* miniprogram/pages/profile/index.wxss */
 page {
-  background-color: #f7f8fa; /* 更柔和的灰底 */
+  background: linear-gradient(180deg, var(--bg-1) 0%, var(--bg-2) 34%, var(--bg-3) 100%);
+  min-height: 100%;
+}
+
+.page-wrap {
+  min-height: 100vh;
 }
 
 .container {
-  padding: 30rpx 24rpx; /* 减小左右边距，让卡片变宽 */
   min-height: 100vh;
+  padding: var(--space-m) var(--space-l) calc(var(--space-l) + var(--space-m));
   box-sizing: border-box;
+  font-family: var(--font-body);
 }
 
-/* === 通用卡片容器 === */
-.login-card,
-.profile-card {
-  background: white;
-  border-radius: 24rpx; /* 更大的圆角 */
-  padding: 60rpx 40rpx; /* 增加内部呼吸感 */
+.card {
   width: 100%;
+  border-radius: var(--radius-2);
+  padding: calc(var(--space-l) + var(--space-m)) calc(var(--space-l) + var(--space-s));
   box-sizing: border-box;
-  box-shadow: 0 8rpx 30rpx rgba(0, 0, 0, 0.04); /* 更柔和的高级阴影 */
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+  background: #ffffff;
+  border: 0;
+  box-shadow: var(--shadow-soft);
 }
 
-/* === 未登录态 === */
-.welcome-text {
-  font-size: 42rpx;
-  font-weight: 600;
-  color: #333;
-  margin-bottom: 16rpx;
+.card + .card {
+  margin-top: var(--space-m);
 }
 
-.sub-text {
-  font-size: 28rpx;
-  color: #999;
-  margin-bottom: 80rpx;
+.card-title {
+  font-size: var(--fz-2);
+  line-height: 1.3;
+  color: var(--ink-strong);
+  font-weight: 700;
+  margin-bottom: calc(var(--space-s) * 1.75);
 }
 
-.login-btn-entry {
-  width: 100% !important; /* 撑满卡片 */
-  height: 96rpx;
-  line-height: 96rpx;
-  border-radius: 48rpx;
-  font-size: 32rpx;
-  font-weight: 500;
-  box-shadow: 0 6rpx 16rpx rgba(7, 193, 96, 0.3); /* 绿色按钮光晕 */
-}
-
-/* === 表单样式 === */
-.title {
-  font-size: 36rpx;
-  font-weight: bold;
-  color: #333;
-  margin-bottom: 50rpx;
-  align-self: flex-start; /* 标题靠左对齐 */
+.card-desc {
+  font-size: var(--fz-4);
+  line-height: 1.7;
+  color: var(--ink-base);
+  margin-bottom: calc(var(--space-l) + var(--space-s));
 }
 
 .avatar-wrapper {
+  width: 100%;
   background: none;
   padding: 0;
-  width: 160rpx !important;
-  margin-bottom: 40rpx;
+  margin-bottom: var(--space-l);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .avatar-wrapper::after {
@@ -71,129 +62,170 @@ page {
   width: 160rpx;
   height: 160rpx;
   border-radius: 50%;
-  background-color: #f0f0f0;
-  box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.1);
+  background: #eef1f5;
+  border: 2rpx solid #e5e7eb;
 }
 
-.tip {
-  font-size: 24rpx;
-  color: #999;
-  margin-top: 16rpx;
+.avatar-tip {
+  margin-top: calc(var(--space-s) * 1.75);
+  font-size: var(--fz-4);
+  color: var(--ink-soft);
 }
 
 .form-group {
   width: 100%;
-  margin-bottom: 60rpx;
+  border-radius: var(--radius-1);
+  background: #f7faff;
+  border: 0;
+  padding: 0 var(--space-m);
+  box-sizing: border-box;
+  margin-bottom: var(--space-m);
+  box-shadow: inset 0 0 0 1rpx rgba(220, 232, 248, 0.45);
 }
 
 .input-row {
   display: flex;
   align-items: center;
-  padding: 30rpx 0;
-  border-bottom: 2rpx solid #f0f0f0; /* 更细的分割线 */
+  min-height: 92rpx;
+  border-bottom: 1rpx solid #e5edf8;
+}
+
+.input-row:last-child {
+  border-bottom: none;
 }
 
 .label {
-  width: 140rpx;
-  font-size: 30rpx;
-  color: #333;
-  font-weight: 500;
+  width: 130rpx;
+  font-size: var(--fz-3);
+  color: #44546d;
 }
 
 .input {
   flex: 1;
-  font-size: 30rpx;
-  color: #333;
-  text-align: right; /* 输入内容靠右，显得整洁 */
+  text-align: right;
+  font-size: var(--fz-3);
+  color: #111827;
 }
 
-.save-btn {
+.input::placeholder {
+  color: #9ca3af;
+}
+
+.hint-text {
+  font-size: var(--fz-4);
+  line-height: 1.6;
+  color: var(--ink-soft);
+  margin-bottom: var(--space-m);
+}
+
+.btn-primary,
+.btn-default,
+.btn-danger {
   width: 100% !important;
-  height: 96rpx;
-  line-height: 96rpx;
-  border-radius: 48rpx;
-  font-size: 32rpx;
-  margin-bottom: 24rpx;
-}
-
-.cancel-btn {
-  width: 100% !important;
-  background: white;
-  color: #999;
-  font-weight: normal;
-  font-size: 30rpx;
-}
-
-/* === 已登录态样式优化 === */
-.success {
-  padding-top: 80rpx;
-  padding-bottom: 80rpx;
-}
-
-.avatar-large {
-  width: 180rpx;
-  height: 180rpx;
-  border-radius: 50%;
-  margin-bottom: 24rpx;
-  border: 6rpx solid #fff;
-  box-shadow: 0 10rpx 30rpx rgba(0, 0, 0, 0.08);
-}
-
-.user-name {
-  font-size: 44rpx;
-  font-weight: bold;
-  color: #333;
-  margin-bottom: 16rpx;
-}
-
-.user-id {
-  font-size: 26rpx;
-  color: #666;
-  background: #f2f4f6; /* 浅灰底色标签 */
-  padding: 8rpx 24rpx;
-  border-radius: 30rpx;
-  margin-bottom: 80rpx;
-  letter-spacing: 2rpx;
-}
-
-/* 按钮区域 */
-.action-area {
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: 24rpx; /* 按钮之间的间距 */
-}
-
-.action-btn {
-  width: 100% !important; /* 关键：撑满宽度 */
-  height: 100rpx; /* 增加高度 */
-  display: flex; /* 让文字垂直居中 */
-  align-items: center;
-  justify-content: center;
-  border-radius: 50rpx;
-  font-size: 32rpx;
+  height: 88rpx;
+  line-height: 88rpx;
+  border-radius: var(--radius-1);
+  font-size: var(--fz-3);
   font-weight: 500;
+  margin: 0 0 var(--space-m);
   padding: 0;
 }
 
-/* 描边按钮样式 */
-.outline {
-  background: white;
-  border: 2rpx solid #e0e0e0;
-  color: #333;
+.btn-primary::after,
+.btn-default::after,
+.btn-danger::after {
+  border: 0;
 }
 
-/* 退出登录按钮样式 */
-.danger {
-  background: #fff5f5; /* 极淡的红色背景 */
-  color: #ff4d4f; /* 红色文字 */
-  border: none;
+.btn-primary {
+  background: linear-gradient(135deg, var(--brand-blue-1) 0%, var(--brand-blue-2) 100%);
+  color: #ffffff;
+  box-shadow: var(--shadow-button);
 }
 
-/* 点击态反馈 (可选) */
-.outline:active {
-  background-color: #f9f9f9;
+.btn-default {
+  background: #ffffff;
+  color: #1f2329;
+  border: 1rpx solid #d0d7de;
 }
-.danger:active {
-  background-color: #ffe6e6;
+
+.btn-danger {
+  background: #fff5f5;
+  color: #d92d20;
+  border: 1rpx solid #ffd5d2;
+  margin-bottom: 0;
+}
+
+.btn-primary:active {
+  filter: brightness(0.95);
+  transform: scale(0.98);
+}
+
+.btn-default:active {
+  background: #f5f7fa;
+}
+
+.btn-danger:active {
+  background: #ffeceb;
+}
+
+.profile-card {
+  align-items: center;
+  text-align: center;
+}
+
+.avatar-large {
+  width: 168rpx;
+  height: 168rpx;
+  border-radius: 50%;
+  margin-bottom: var(--space-m);
+  border: 2rpx solid #e5e7eb;
+}
+
+.user-name {
+  font-size: var(--fz-1);
+  color: var(--ink-strong);
+  margin-bottom: calc(var(--space-s) * 1.5);
+  font-weight: 700;
+}
+
+.user-id {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-s) var(--space-m);
+  border-radius: var(--radius-3);
+  background: #f3f6fb;
+  color: var(--ink-base);
+  font-size: var(--fz-4);
+  margin-bottom: var(--space-l);
+}
+
+.notice-box {
+  width: 100%;
+  border-radius: var(--radius-1);
+  padding: var(--space-m);
+  margin-bottom: var(--space-l);
+  box-sizing: border-box;
+  background: #f7f9fc;
+  border: 0;
+  box-shadow: inset 0 0 0 1rpx rgba(226, 235, 248, 0.62);
+  text-align: left;
+}
+
+.notice-title {
+  font-size: var(--fz-4);
+  color: #41516a;
+  margin-bottom: calc(var(--space-s) * 0.75);
+  font-weight: 600;
+}
+
+.notice-content {
+  font-size: var(--fz-4);
+  line-height: 1.6;
+  color: var(--ink-base);
+}
+
+.action-area {
+  width: 100%;
 }

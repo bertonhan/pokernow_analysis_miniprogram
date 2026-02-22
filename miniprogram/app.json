@@ -3,9 +3,9 @@
   "pages": [
     "pages/profile/index",
     "pages/match/list/index",
-    "pages/match/add/index",
     "pages/match/detail/index",
     "pages/player/index",
+    "pages/player/detail/index",
     "pages/match/bind/index"
   ],
   "window": {

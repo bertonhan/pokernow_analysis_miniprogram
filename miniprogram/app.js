@@ -41,10 +41,16 @@ App({
     if (!wx.cloud) {
       console.error('请使用 2.2.3 或以上的基础库以使用云能力');
     } else {
+      const supportsRealtimeAction = typeof wx.reportRealtimeAction === 'function' ||
+        (typeof wx.canIUse === 'function' && wx.canIUse('reportRealtimeAction'))
       wx.cloud.init({
         env: 'cloud1-2gpsa3y0fb62239f', // 请确保这里是你真实的环境ID
-        traceUser: true,
+        // 低版本基础库 / Worker 环境不支持实时上报时，关闭 traceUser，避免进入详情页时出现兼容告警
+        traceUser: !!supportsRealtimeAction,
       });
+      if (!supportsRealtimeAction) {
+        console.warn('[app] 当前环境不支持 reportRealtimeAction，已降级关闭 traceUser')
+      }
     }
     // 启动时自动检查
     this.initOpenId()

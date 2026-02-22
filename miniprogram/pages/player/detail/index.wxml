@@ -1,0 +1,87 @@
+<view class="container">
+  <view class="loading-box" wx:if="{{loading}}">
+    <text>加载中...</text>
+  </view>
+
+  <view class="empty-box" wx:if="{{!loading && !detail}}">
+    <text>未找到该玩家数据</text>
+  </view>
+
+  <block wx:if="{{!loading && detail}}">
+    <view class="hero-card">
+      <view class="hero-orb hero-orb-a"></view>
+      <view class="hero-orb hero-orb-b"></view>
+      <view class="hero-top">
+        <view class="hero-left">
+          <image
+            class="hero-avatar"
+            mode="aspectFill"
+            src="{{detail.avatarUrl ? detail.avatarUrl : 'https://img.icons8.com/color/96/user-male-circle--v1.png'}}"
+          ></image>
+          <view class="hero-main">
+            <view class="hero-name-row">
+              <text class="hero-name">{{detail.displayName}}</text>
+              <text class="bound-tag {{detail.isBound ? 'bound' : 'solo'}}">{{detail.isBound ? '已绑定聚合' : '未绑定单局'}}</text>
+            </view>
+            <view class="hero-meta-row">
+              <text class="hero-meta-chip">局数 {{detail.gameCount}}</text>
+              <text class="hero-meta-chip">手数 {{detail.hands}}</text>
+            </view>
+          </view>
+        </view>
+        <view class="hero-net-box">
+          <text class="hero-net-label">总盈亏</text>
+          <text class="hero-net {{detail.totalNet >= 0 ? 'win' : 'lose'}}">{{detail.totalNet >= 0 ? '+' : ''}}{{detail.totalNet}}</text>
+        </view>
+      </view>
+      <view class="hero-tags" wx:if="{{detail.styleTags && detail.styleTags.length > 0}}">
+        <block wx:for="{{detail.styleTags}}" wx:key="*this">
+          <text class="tag">{{item}}</text>
+        </block>
+      </view>
+    </view>
+
+    <view class="section-card">
+      <view class="section-title">核心指标</view>
+      <view class="metric-grid">
+        <view class="metric-item"><text class="metric-label">主动入池</text><text class="metric-value">{{detail.vpip}}%</text></view>
+        <view class="metric-item"><text class="metric-label">翻前加注</text><text class="metric-value">{{detail.pfr}}%</text></view>
+        <view class="metric-item"><text class="metric-label">平跟溜入</text><text class="metric-value">{{detail.limp}}%</text></view>
+        <view class="metric-item"><text class="metric-label">激进因子</text><text class="metric-value">{{detail.af}}</text></view>
+        <view class="metric-item"><text class="metric-label">3-Bet率</text><text class="metric-value">{{detail.bet3}}%</text></view>
+        <view class="metric-item"><text class="metric-label">C-Bet率</text><text class="metric-value">{{detail.cbet}}%</text></view>
+        <view class="metric-item"><text class="metric-label">摊牌比率</text><text class="metric-value">{{detail.wtsd}}%</text></view>
+        <view class="metric-item"><text class="metric-label">摊牌胜率</text><text class="metric-value">{{detail.wsd}}%</text></view>
+      </view>
+    </view>
+
+    <view class="section-card">
+      <view class="section-title">最近对局</view>
+      <view class="match-empty" wx:if="{{!detail.recentMatches || detail.recentMatches.length === 0}}">暂无对局记录</view>
+
+      <view
+        class="match-item"
+        wx:for="{{detail.recentMatches}}"
+        wx:key="gameId"
+        data-gameid="{{item.gameId}}"
+        bindtap="openMatch"
+      >
+        <view class="line-top">
+          <text class="match-name">{{item.matchName || item.gameId}}</text>
+          <text class="match-date">{{item.createTime || '--'}}</text>
+        </view>
+        <view class="line-bottom">
+          <view class="bottom-left">
+            <block wx:for="{{item.aliases || []}}" wx:key="*this" wx:for-item="aliasName">
+              <text class="alias-tag">{{aliasName}}</text>
+            </block>
+          </view>
+          <view class="bottom-right">
+            <text class="match-hands">手数 {{item.hands}}</text>
+            <text class="match-net {{item.net >= 0 ? 'win' : 'lose'}}">{{item.net >= 0 ? '+' : ''}}{{item.net}}</text>
+          </view>
+        </view>
+      </view>
+    </view>
+  </block>
+</view>

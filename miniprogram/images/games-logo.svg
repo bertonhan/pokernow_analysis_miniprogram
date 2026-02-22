@@ -1,0 +1,21 @@
+<svg width="200" height="200" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <!-- 圆形背景 -->
+  <circle cx="100" cy="100" r="95" fill="#1a1a2e" stroke="#00d9ff" stroke-width="3"/>
+  
+  <!-- 扑克牌堆叠效果（代表多局对局） -->
+  <!-- 最下面的牌 -->
+  <rect x="45" y="55" width="60" height="80" rx="5" fill="#2d2d44" stroke="#00d9ff" stroke-width="2" transform="rotate(-15, 75, 95)"/>
+  
+  <!-- 中间的牌 -->
+  <rect x="50" y="50" width="60" height="80" rx="5" fill="#3d3d5c" stroke="#00d9ff" stroke-width="2" transform="rotate(-5, 80, 90)"/>
+  
+  <!-- 最上面的牌 -->
+  <rect x="55" y="45" width="60" height="80" rx="5" fill="#16213e" stroke="#00d9ff" stroke-width="2"/>
+  
+  <!-- 牌上的装饰 -->
+  <text x="85" y="70" text-anchor="middle" font-size="16" fill="#00d9ff">♠</text>
+  <text x="85" y="115" text-anchor="middle" font-size="12" fill="#ffffff">对局</text>
+  
+  <!-- 装饰性元素 -->
+  <circle cx="100" cy="100" r="70" fill="none" stroke="#0f3460" stroke-width="2" opacity="0.5"/>
+</svg>

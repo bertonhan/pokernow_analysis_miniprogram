@@ -1,0 +1,149 @@
+/*
+ * Global Design Tokens
+ * Scope: mini program global styles
+ *
+ * Typography (5 tiers, min 20rpx):
+ * --fz-1: 40rpx
+ * --fz-2: 34rpx
+ * --fz-3: 30rpx
+ * --fz-4: 24rpx
+ * --fz-5: 20rpx
+ *
+ * Spacing (3 tiers):
+ * --space-s: 8rpx
+ * --space-m: 16rpx
+ * --space-l: 24rpx
+ *
+ * Radius (3 tiers):
+ * --radius-1: 12rpx
+ * --radius-2: 18rpx
+ * --radius-3: 24rpx
+ *
+ * Font family:
+ * --font-body: 'PingFang SC', 'Helvetica Neue', sans-serif
+ * --font-number: 'DIN Alternate', 'PingFang SC', sans-serif
+ *
+ * Letter spacing:
+ * --ls-0: 0
+ * --ls-1: 0.4rpx (only for sparse Latin/ID readability when necessary)
+ *
+ * Core palette:
+ * --bg-1/#e9f1ff, --bg-2/#f4f8ff, --bg-3/#eef3f8
+ * --ink-strong/#15253e, --ink-base/#5b6b84, --ink-soft/#8c98a8
+ * --brand-blue-1/#1f96ff, --brand-blue-2/#1f67ff
+ * --brand-green/#07c160, --profit-green/#04b65f, --brand-red/#ef4444
+ *
+ * Shadows:
+ * --shadow-hero, --shadow-card, --shadow-soft, --shadow-button
+ *
+ * Button size:
+ * --btn-h: 56rpx
+ * --btn-font-size: 24rpx
+ * --btn-pad-x: 24rpx
+ * --btn-radius: 999rpx
+ * --btn-icon-box: 52rpx
+ * --btn-icon-size: 28rpx
+ *
+ * Special radius:
+ * --radius-pill: 999rpx
+ * --radius-header-cut: 36rpx
+ */
+
+page {
+  /* Typography */
+  --fz-1: 40rpx;
+  --fz-2: 34rpx;
+  --fz-3: 30rpx;
+  --fz-4: 24rpx;
+  --fz-5: 20rpx;
+
+  /* Spacing */
+  --space-s: 8rpx;
+  --space-m: 16rpx;
+  --space-l: 24rpx;
+
+  /* Radius */
+  --radius-1: 12rpx;
+  --radius-2: 18rpx;
+  --radius-3: 24rpx;
+
+  /* Font families */
+  --font-body: 'PingFang SC', 'Helvetica Neue', sans-serif;
+  --font-number: 'DIN Alternate', 'PingFang SC', sans-serif;
+
+  /* Letter spacing */
+  --ls-0: 0;
+  --ls-1: 0.4rpx;
+
+  /* Core palette */
+  --bg-1: #e9f1ff;
+  --bg-2: #f4f8ff;
+  --bg-3: #eef3f8;
+  --ink-strong: #15253e;
+  --ink-base: #5b6b84;
+  --ink-soft: #8c98a8;
+  --brand-blue-1: #1f96ff;
+  --brand-blue-2: #1f67ff;
+  --brand-green: #07c160;
+  --profit-green: #04b65f;
+  --brand-red: #ef4444;
+
+  /* Shadows */
+  --shadow-hero: 0 10rpx 24rpx rgba(21, 54, 104, 0.09);
+  --shadow-card: 0 10rpx 24rpx rgba(15, 39, 80, 0.07);
+  --shadow-soft: 0 8rpx 18rpx rgba(15, 39, 80, 0.05);
+  --shadow-button: 0 10rpx 22rpx rgba(31, 103, 255, 0.28);
+
+  /* Button size */
+  --btn-h: 56rpx;
+  --btn-font-size: 24rpx;
+  --btn-pad-x: 24rpx;
+  --btn-radius: 999rpx;
+  --btn-icon-box: 52rpx;
+  --btn-icon-size: 28rpx;
+
+  /* Special */
+  --radius-pill: 999rpx;
+  --radius-header-cut: 36rpx;
+}
+
+/* Typography helpers */
+.u-fz-1 { font-size: var(--fz-1) !important; }
+.u-fz-2 { font-size: var(--fz-2) !important; }
+.u-fz-3 { font-size: var(--fz-3) !important; }
+.u-fz-4 { font-size: var(--fz-4) !important; }
+.u-fz-5 { font-size: var(--fz-5) !important; }
+
+/* Spacing helpers */
+.u-gap-s { gap: var(--space-s) !important; }
+.u-gap-m { gap: var(--space-m) !important; }
+.u-gap-l { gap: var(--space-l) !important; }
+
+.u-p-s { padding: var(--space-s) !important; }
+.u-p-m { padding: var(--space-m) !important; }
+.u-p-l { padding: var(--space-l) !important; }
+
+.u-mt-s { margin-top: var(--space-s) !important; }
+.u-mt-m { margin-top: var(--space-m) !important; }
+.u-mt-l { margin-top: var(--space-l) !important; }
+
+.u-mb-s { margin-bottom: var(--space-s) !important; }
+.u-mb-m { margin-bottom: var(--space-m) !important; }
+.u-mb-l { margin-bottom: var(--space-l) !important; }
+
+.u-px-s { padding-left: var(--space-s) !important; padding-right: var(--space-s) !important; }
+.u-px-m { padding-left: var(--space-m) !important; padding-right: var(--space-m) !important; }
+.u-px-l { padding-left: var(--space-l) !important; padding-right: var(--space-l) !important; }
+
+.u-py-s { padding-top: var(--space-s) !important; padding-bottom: var(--space-s) !important; }
+.u-py-m { padding-top: var(--space-m) !important; padding-bottom: var(--space-m) !important; }
+.u-py-l { padding-top: var(--space-l) !important; padding-bottom: var(--space-l) !important; }
+
+/* Radius helpers */
+.u-r-1 { border-radius: var(--radius-1) !important; }
+.u-r-2 { border-radius: var(--radius-2) !important; }
+.u-r-3 { border-radius: var(--radius-3) !important; }
+
+/* Special helpers */
+.u-r-pill { border-radius: var(--radius-pill) !important; }
+.u-r-header-cut { border-radius: 0 0 var(--radius-header-cut) var(--radius-header-cut) !important; }

@@ -1,34 +1,45 @@
 <view class="container">
 
 <block wx:if="{{isLoggedIn}}">
-  <view class="add-box">
-    <input class="link-input" placeholder=" 粘贴 Pokernow 对局链接" bindinput="onInputLink" value="{{inputLink}}"></input>
-    <view class="add-btn" bindtap="createMatch" hover-class="btn-hover">新建</view>
+  <view class="panel-create">
+    <view class="panel-head">
+      <text class="panel-title">对局控制台</text>
+      <text class="panel-subtitle">创建新对局并实时追踪手牌记录</text>
+    </view>
+    <view class="add-box">
+      <input class="link-input" placeholder="粘贴 PokerNow 对局链接" bindinput="onInputLink" value="{{inputLink}}"></input>
+      <view class="add-btn" bindtap="createMatch" hover-class="btn-hover">新建</view>
+    </view>
   </view>
 
-  <scroll-view scroll-y class="list-area">
+  <view class="logged-empty" wx:if="{{matchList.length === 0}}">
+    <view class="logged-empty-title">暂无对局记录</view>
+    <view class="logged-empty-sub">先粘贴链接创建一局，对局会自动进入追踪</view>
+  </view>
+
+  <scroll-view wx:else scroll-y class="list-area">
     <block wx:for="{{matchList}}" wx:key="_id">
       <movable-area class="swipe-area">
         <movable-view class="swipe-content" direction="horizontal" inertia="true" out-of-bounds="true" damping="100" x="{{item.x}}" data-index="{{index}}" bindtouchend="onSwipeEnd" disabled="{{!isAdmin}}">
-          
           <view class="swipe-wrapper">
-            
             <view class="card-outer">
-              <view class="card">
+              <view class="card {{item.status=='记录中' ? 'card-running' : (item.status=='已暂停' ? 'card-paused' : 'card-ended')}}">
                 <view class="card-header">
-                  <text class="match-name">{{item.name}}</text>
+                  <view class="title-group">
+                    <text class="match-name">{{item.name}}</text>
+                    <text class="match-id">ID {{item.gameId}}</text>
+                  </view>
                   <view class="status-tag {{item.status=='记录中' ? 'running' : (item.status=='已暂停' ? 'paused' : 'ended')}}">
                     <view wx:if="{{item.status=='记录中'}}" class="dot"></view>
                     {{item.status}}
                   </view>
                 </view>
 
-                <view class="data-panel">
+                <view class="card-meta">
                   <view class="data-row">
                     <view class="icon-wrap">
                       <image class="data-icon" src="https://img.icons8.com/ios-glyphs/60/000000/time.png"></image>
                     </view>
-                    
                     <block wx:if="{{item.status == '已结束'}}">
                       <text class="data-text">{{item.realStartTime || item.createTime}} ~ {{item.realEndTime || '?'}}</text>
                     </block>
@@ -37,7 +48,7 @@
                     </block>
                   </view>
 
-                  <view class="data-row">
+                  <view class="data-row hand-row">
                     <view class="icon-wrap">
                       <image class="data-icon" src="https://img.icons8.com/ios-glyphs/60/000000/activity-feed.png"></image>
                     </view>
@@ -46,10 +57,9 @@
                 </view>
 
                 <view class="action-row">
-                  
                   <view class="action-left">
                     <view class="btn-capsule blue" bindtap="viewMatch" data-id="{{item.gameId}}" hover-class="capsule-hover">详情</view>
-                    <view class="btn-capsule purple" catchtap="goToBind" data-id="{{item.gameId}}" hover-class="capsule-hover">绑定</view>
+                    <view class="btn-capsule cyan" catchtap="goToBind" data-id="{{item.gameId}}" hover-class="capsule-hover">绑定</view>
                   </view>
 
                   <view class="action-right">
@@ -73,17 +83,16 @@
                       结束
                     </view>
                   </view>
-
-                </view> </view>
+                </view>
+              </view>
             </view>
 
-            <view class="delete-btn center" catchtap="deleteMatch" data-id="{{item.gameId}}" data-index="{{index}}">删除</view>
-          
+            <view class="delete-btn" catchtap="deleteMatch" data-id="{{item.gameId}}" data-index="{{index}}">删除</view>
           </view>
         </movable-view>
       </movable-area>
     </block>
-    <view style="height: 40rpx;"></view>
+    <view class="list-bottom-space"></view>
   </scroll-view>
 </block>
 

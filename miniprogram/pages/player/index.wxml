@@ -1,11 +1,92 @@
 <view class="container">
 
 <block wx:if="{{isLoggedIn}}">
-  <view class="working-state">
-    <image class="working-icon" src="https://img.icons8.com/ios/100/cccccc/hammer.png"></image>
-    <view class="working-text">玩家数据分析功能开发中...</view>
-    <view class="working-sub-text">敬请期待</view>
+  <view class="hero-card">
+    <view class="hero-deco hero-deco-a"></view>
+    <view class="hero-deco hero-deco-b"></view>
+    <view class="hero-main">
+      <view class="title-row">
+        <view class="title-wrap">
+          <view class="title">玩家总榜</view>
+          <view class="subtitle">已绑定跨局聚合，未绑定按每局独立统计</view>
+        </view>
+        <view class="mode-pill">按总盈亏</view>
+      </view>
+      <view class="hero-foot">
+        <view class="summary-pill">共 {{total}} 名玩家</view>
+        <view class="build-btn {{building ? 'is-loading' : ''}}" bindtap="rebuildGlobalStats">{{building ? '刷新中' : '刷新数据'}}</view>
+      </view>
+    </view>
   </view>
+
+  <view class="filter-row full-width">
+    <view class="chip {{mode==='all' ? 'active' : ''}}" data-mode="all" bindtap="onModeChange">全部</view>
+    <view class="chip {{mode==='bound' ? 'active' : ''}}" data-mode="bound" bindtap="onModeChange">已绑定</view>
+    <view class="chip {{mode==='solo' ? 'active' : ''}}" data-mode="solo" bindtap="onModeChange">未绑定</view>
+  </view>
+
+  <view class="loading-box" wx:if="{{loading && list.length === 0}}">
+    <text>加载中...</text>
+  </view>
+
+  <view class="empty-box" wx:if="{{!loading && list.length === 0}}">
+    <view class="empty-title">暂无玩家统计数据</view>
+    <view class="empty-sub">点击上方“刷新数据”生成全局玩家统计</view>
+  </view>
+
+  <scroll-view
+    wx:if="{{list.length > 0}}"
+    class="list-scroll"
+    scroll-y
+    bindscrolltolower="onScrollToLower"
+  >
+    <block wx:for="{{list}}" wx:key="globalPlayerKey">
+      <view class="player-card" bindtap="goDetail" data-key="{{item.globalPlayerKey}}">
+        <view class="card-glow"></view>
+        <view class="card-top">
+          <view class="player-main">
+            <view class="avatar-wrap">
+              <image
+                class="avatar"
+                mode="aspectFill"
+                src="{{item.avatarUrl ? item.avatarUrl : 'https://img.icons8.com/color/96/user-male-circle--v1.png'}}"
+              ></image>
+              <view class="rank-badge {{item.rank===1 ? 'rank-top-1' : item.rank===2 ? 'rank-top-2' : item.rank===3 ? 'rank-top-3' : ''}}">#{{item.rank}}</view>
+            </view>
+            <view class="identity">
+              <view class="name-line">
+                <text class="name">{{item.displayName}}</text>
+              </view>
+              <view class="meta-badges">
+                <text class="bound-tag {{item.isBound ? 'bound' : 'solo'}}">{{item.isBound ? '已绑定' : '未绑定'}}</text>
+                <text class="count-tag">{{item.gameCount}}局 · {{item.hands}}手</text>
+              </view>
+            </view>
+          </view>
+          <view class="net-wrap">
+            <text class="net-label">总盈亏</text>
+            <text class="net {{item.totalNet >= 0 ? 'win' : 'lose'}}">{{item.totalNet >= 0 ? '+' : ''}}{{item.totalNet}}</text>
+            <text class="detail-hint">查看详情 ></text>
+          </view>
+        </view>
+
+        <view class="stats-row">
+          <view class="stat-pill"><text class="stat-label">主动入池</text><text class="stat-value">{{item.vpip}}%</text></view>
+          <view class="stat-pill"><text class="stat-label">翻前加注</text><text class="stat-value">{{item.pfr}}%</text></view>
+          <view class="stat-pill"><text class="stat-label">激进因子</text><text class="stat-value">{{item.af}}</text></view>
+        </view>
+
+        <view class="tags-row" wx:if="{{item.styleTags && item.styleTags.length > 0}}">
+          <block wx:for="{{item.styleTags}}" wx:key="*this" wx:for-item="tagText">
+            <text class="tag">{{tagText}}</text>
+          </block>
+        </view>
+      </view>
+    </block>
+
+    <view class="list-footer" wx:if="{{loading}}">加载更多中...</view>
+    <view class="list-footer" wx:if="{{!hasMore}}">没有更多了</view>
+  </scroll-view>
 </block>
 
 <view class="empty-state" wx:else>

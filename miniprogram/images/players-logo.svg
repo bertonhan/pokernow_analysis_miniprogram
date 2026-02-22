@@ -1,0 +1,29 @@
+<svg width="200" height="200" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <!-- 圆形背景 -->
+  <circle cx="100" cy="100" r="95" fill="#1a1a2e" stroke="#00ff88" stroke-width="3"/>
+  
+  <!-- 筹码装饰（代表玩家） -->
+  <!-- 左侧筹码 -->
+  <circle cx="65" cy="100" r="25" fill="#2d2d44" stroke="#00ff88" stroke-width="2"/>
+  <circle cx="65" cy="100" r="18" fill="#16213e"/>
+  <circle cx="65" cy="100" r="12" fill="#2d2d44"/>
+  
+  <!-- 中间筹码（稍大） -->
+  <circle cx="100" cy="95" r="30" fill="#2d2d44" stroke="#00ff88" stroke-width="2"/>
+  <circle cx="100" cy="95" r="22" fill="#16213e"/>
+  <circle cx="100" cy="95" r="14" fill="#2d2d44"/>
+  <!-- 玩家图标 -->
+  <circle cx="100" cy="90" r="7" fill="#00ff88"/>
+  <path d="M90 100 Q100 108 110 100" stroke="#00ff88" stroke-width="2" fill="none"/>
+  
+  <!-- 右侧筹码 -->
+  <circle cx="135" cy="100" r="25" fill="#2d2d44" stroke="#00ff88" stroke-width="2"/>
+  <circle cx="135" cy="100" r="18" fill="#16213e"/>
+  <circle cx="135" cy="100" r="12" fill="#2d2d44"/>
+  
+  <!-- 装饰性文字 -->
+  <text x="100" y="155" text-anchor="middle" font-size="14" fill="#00ff88" font-family="Arial, sans-serif">玩家</text>
+  
+  <!-- 装饰性圆环 -->
+  <circle cx="100" cy="100" r="70" fill="none" stroke="#0f3460" stroke-width="2" opacity="0.5"/>
+</svg>

@@ -24,6 +24,25 @@ async function fetchLedger(gameId) {
   }
 }
 
+// === 新增：更新对局，并尽量同步一次账单（即使无手牌日志也尝试） ===
+async function updateMatchWithOptionalLedger(gameId, baseData, scene) {
+  const updateData = Object.assign({}, baseData || {})
+  let ledgerSynced = false
+
+  const ledgerData = await fetchLedger(gameId)
+  if (ledgerData) {
+    ledgerSynced = true
+    updateData.ledger = ledgerData
+    updateData.lastLedgerUpdate = new Date()
+    console.log(`[Ledger] ${scene} 账单同步成功`)
+  } else {
+    console.warn(`[Ledger] ${scene} 账单同步失败或无数据`)
+  }
+
+  await db.collection('matches').where({ gameId: gameId }).update({ data: updateData })
+  return ledgerSynced
+}
+
 
 exports.main = async (event, context) => {
   let { gameId, handNumber } = event
@@ -80,14 +99,16 @@ exports.main = async (event, context) => {
 
         if (emptyRetryCount >= MAX_EMPTY_RETRIES) {
           console.log('[停止] 连续多次无数据，自动暂停对局')
-          
-          // 1. 更新数据库状态为 "已暂停"
-          await db.collection('matches').where({ gameId: gameId }).update({
-            data: { status: '已暂停' }
-          })
-          
-          // 2. 结束爬虫
-          return { status: 'empty_stopped', msg: '无数据自动停止' }
+
+          // 停止前补拉一次账单，兼容历史对局无 full log 的场景
+          const ledgerSynced = await updateMatchWithOptionalLedger(
+            gameId,
+            { status: '已暂停', currentHandNumber: handNumber },
+            'empty_stop'
+          )
+
+          // 结束爬虫
+          return { status: 'empty_stopped', msg: '无数据自动停止', ledgerSynced: ledgerSynced }
         }
 
       } else {
@@ -123,25 +144,12 @@ exports.main = async (event, context) => {
 
           console.log(`Hand #${handNumber} 结束 -> 正在同步账单...`)
           
-          // 1. 尝试获取最新账单 (并行执行，不等待太久)
-          const ledgerData = await fetchLedger(gameId)
-          
-          // 2. 准备更新数据对象
           const updateData = {
             currentHandNumber: handNumber + 1 // 手牌数 + 1
           }
 
-          // 3. 如果拿到了账单，一起更新进去
-          if (ledgerData) {
-            console.log('账单同步成功，写入数据库')
-            updateData.ledger = ledgerData
-            updateData.lastLedgerUpdate = new Date() // 记录一下最后更新账单的时间
-          }
-
-          // 4. 执行原子更新
-          await db.collection('matches').where({ gameId: gameId }).update({
-            data: updateData
-          })
+          // 手牌结束后正常同步账单
+          await updateMatchWithOptionalLedger(gameId, updateData, `hand_${handNumber}_ended`)
           
           // 这里的 handNumber 也要手动加，以便下一轮循环使用
           handNumber += 1 
@@ -155,14 +163,16 @@ exports.main = async (event, context) => {
 
       if (errorRetryCount >= MAX_ERROR_RETRIES) {
         console.log('[停止] 接口连续报错，暂停对局')
-        
-        // 1. 更新数据库状态为 "已暂停"
-        await db.collection('matches').where({ gameId: gameId }).update({
-          data: { status: '已暂停' } 
-        })
-        
-        // 2. 结束云函数
-        return { status: 'error_stopped', msg: err.message }
+
+        // 停止前补拉一次账单，减少因日志接口异常导致 ledger 缺失
+        const ledgerSynced = await updateMatchWithOptionalLedger(
+          gameId,
+          { status: '已暂停', currentHandNumber: handNumber },
+          'error_stop'
+        )
+
+        // 结束云函数
+        return { status: 'error_stopped', msg: err.message, ledgerSynced: ledgerSynced }
       }
     }
 

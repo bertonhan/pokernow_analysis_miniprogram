@@ -1,0 +1,17 @@
+<svg width="200" height="200" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <!-- 圆形背景 -->
+  <circle cx="100" cy="100" r="95" fill="#1a1a2e" stroke="#e94560" stroke-width="3"/>
+  
+  <!-- 扑克牌花色装饰 -->
+  <text x="100" y="50" text-anchor="middle" font-size="20" fill="#e94560">♠</text>
+  <text x="50" y="105" text-anchor="middle" font-size="20" fill="#e94560">♥</text>
+  <text x="150" y="105" text-anchor="middle" font-size="20" fill="#e94560">♦</text>
+  <text x="100" y="160" text-anchor="middle" font-size="20" fill="#e94560">♣</text>
+  
+  <!-- 中心"格局"文字 -->
+  <text x="100" y="108" text-anchor="middle" font-size="32" font-weight="bold" fill="#ffffff" font-family="Arial, sans-serif">格局</text>
+  
+  <!-- 装饰性圆环 -->
+  <circle cx="100" cy="100" r="70" fill="none" stroke="#16213e" stroke-width="2"/>
+  <circle cx="100" cy="100" r="80" fill="none" stroke="#0f3460" stroke-width="1"/>
+</svg>

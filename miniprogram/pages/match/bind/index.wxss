@@ -1,7 +1,7 @@
 /* miniprogram/pages/match/bind/index.wxss */
 
 page {
-  background-color: #f6f7f9;
+  background: linear-gradient(180deg, var(--bg-1) 0%, var(--bg-2) 34%, var(--bg-3) 100%);
   box-sizing: border-box;
   padding: 0;
 }
@@ -17,6 +17,7 @@ view, text, image, scroll-view {
   height: 100vh;
   padding: 0;
   align-items: stretch;
+  font-family: var(--font-body);
 }
 
 
@@ -24,95 +25,96 @@ view, text, image, scroll-view {
 .header-card {
   background: #fff;
   /* 增加内边距，让它看起来更厚实 */
-  padding: 30rpx 40rpx 40rpx 40rpx; 
+  padding: calc(var(--space-l) + var(--space-s)) calc(var(--space-l) + var(--space-m)) calc(var(--space-l) + var(--space-m)) calc(var(--space-l) + var(--space-m));
   /* 只有底部有圆角 */
-  border-radius: 0 0 40rpx 40rpx; 
-  box-shadow: 0 4rpx 30rpx rgba(0,0,0,0.03);
+  border-radius: 0 0 var(--radius-header-cut) var(--radius-header-cut);
+  box-shadow: var(--shadow-hero);
   z-index: 10;
-  margin-bottom: 24rpx;
+  margin-bottom: var(--space-l);
 }
 
 .title {
-  font-size: 40rpx;
+  font-size: var(--fz-1);
   font-weight: 800;
-  color: #333;
-  margin-bottom: 6rpx;
+  color: var(--ink-strong);
+  margin-bottom: calc(var(--space-s) * 0.75);
 }
 
 .subtitle {
-  font-size: 26rpx;
-  color: #999;
-  margin-bottom: 24rpx;
+  font-size: var(--fz-4);
+  color: var(--ink-base);
+  margin-bottom: var(--space-l);
 }
 
 /* === 状态提示条 (内嵌式) === */
 .status-banner {
   display: flex;
   align-items: center;
-  gap: 12rpx;
-  padding: 16rpx 24rpx;
-  border-radius: 16rpx;
-  font-size: 24rpx;
+  gap: calc(var(--space-s) * 1.5);
+  padding: var(--space-m) var(--space-l);
+  border-radius: var(--radius-1);
+  font-size: var(--fz-4);
   font-weight: 500;
 }
 
 .status-banner.ongoing {
-  background: #fffbe6; /* 很淡的黄色背景 */
-  color: #fa8c16;
-  border: 1rpx solid rgba(250, 140, 22, 0.1);
+  background: #fff6e8;
+  color: #b4650c;
+  border: 0;
+  box-shadow: inset 0 0 0 1rpx rgba(180, 101, 12, 0.12);
 }
 
 .status-banner.ended {
-  background: #f5f5f5;
-  color: #999;
-  border: 1rpx solid #eee;
+  background: #edf2fb;
+  color: #5f6e84;
+  border: 0;
+  box-shadow: inset 0 0 0 1rpx rgba(95, 110, 132, 0.1);
 }
 
 /* === 列表区域 === */
 .list-area {
   flex: 1;
   /* 因为container去掉了padding，这里补上，防止卡片贴边 */
-  padding: 0 24rpx; 
+  padding: 0 var(--space-l);
 }
 
 /* === 选手卡片 === */
 .player-card {
   background: #fff;
-  border-radius: 24rpx; /* 更大的圆角 */
-  padding: 24rpx;
-  margin-bottom: 20rpx;
+  border-radius: var(--radius-3); /* 更大的圆角 */
+  padding: var(--space-l);
+  margin-bottom: var(--space-m);
   display: flex;
   align-items: center;
-  box-shadow: 0 2rpx 10rpx rgba(0,0,0,0.01);
-  border: 2rpx solid transparent;
+  box-shadow: var(--shadow-soft);
+  border: 0;
   transition: all 0.2s;
 }
 
 .player-card.is-mine {
-  background: #f6ffed;
-  border-color: #b7eb8f;
-  box-shadow: 0 4rpx 12rpx rgba(7, 193, 96, 0.1);
+  background: linear-gradient(160deg, #ffffff 0%, #f1f8ff 100%);
+  box-shadow: 0 10rpx 24rpx rgba(31, 120, 255, 0.1);
 }
 
 /* === 头像 === */
 .avatar {
   width: 88rpx;
   height: 88rpx;
-  background: #f0f5ff;
-  color: #1890ff;
+  background: #edf4ff;
+  color: #1f67ff;
   border-radius: 50%;
   text-align: center;
   line-height: 88rpx;
-  font-size: 36rpx;
+  font-size: var(--fz-2);
   font-weight: bold;
-  margin-right: 24rpx;
+  margin-right: var(--space-l);
   flex-shrink: 0;
 }
 
 .avatar.avatar-mine {
-  background: linear-gradient(135deg, #07c160, #389e0d);
+  background: linear-gradient(135deg, #1f96ff, #1f67ff);
   color: #fff;
-  box-shadow: 0 6rpx 16rpx rgba(7, 193, 96, 0.3);
+  box-shadow: var(--shadow-button);
 }
 
 /* === 中间信息 === */
@@ -127,14 +129,14 @@ view, text, image, scroll-view {
 .name-row {
   display: flex;
   align-items: center;
-  margin-bottom: 8rpx;
+  margin-bottom: var(--space-s);
 }
 
 .name {
-  font-size: 32rpx;
+  font-size: var(--fz-3);
   font-weight: 700;
-  color: #333;
-  margin-right: 12rpx;
+  color: var(--ink-strong);
+  margin-right: calc(var(--space-s) * 1.5);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -142,23 +144,23 @@ view, text, image, scroll-view {
 }
 
 .name.masked {
-  color: #ccc;
+  color: #a6b2c4;
   font-style: italic;
   font-weight: normal;
 }
 
 .sub-name {
-  font-size: 24rpx;
-  color: #999;
-  margin-right: 10rpx;
+  font-size: var(--fz-4);
+  color: var(--ink-soft);
+  margin-right: calc(var(--space-s) * 1.25);
 }
 
 .tag-mine {
-  font-size: 20rpx;
+  font-size: var(--fz-5);
   background: #e6fffb;
   color: #07c160;
-  padding: 2rpx 10rpx;
-  border-radius: 8rpx;
+  padding: calc(var(--space-s) * 0.25) calc(var(--space-s) * 1.25);
+  border-radius: var(--radius-1);
   font-weight: 600;
   border: 1rpx solid rgba(7, 193, 96, 0.2);
 }
@@ -166,41 +168,45 @@ view, text, image, scroll-view {
 .id-row {
   display: flex;
   align-items: center;
-  font-size: 24rpx;
-  color: #bbb;
+  font-size: var(--fz-4);
+  color: var(--ink-soft);
 }
 
 .id-val {
-  font-family: "Courier New", monospace;
-  margin-left: 8rpx;
+  font-family: var(--font-body);
+  margin-left: var(--space-s);
   font-weight: 500;
 }
 
 /* === 按钮区域 === */
 .action {
-  margin-left: 20rpx;
+  margin-left: var(--space-m);
   flex-shrink: 0;
 }
 
 .btn {
-  padding: 14rpx 36rpx;
-  border-radius: 40rpx;
-  font-size: 26rpx;
+  min-width: 112rpx;
+  height: var(--btn-h);
+  line-height: var(--btn-h);
+  padding: 0 var(--btn-pad-x);
+  border-radius: var(--btn-radius);
+  font-size: var(--btn-font-size);
   font-weight: 600;
   text-align: center;
+  box-sizing: border-box;
 }
-.btn-hover { opacity: 0.8; transform: scale(0.98); }
+.btn-hover { opacity: 0.86; transform: scale(0.97); }
 
 .bind {
-  background: #07c160;
+  background: linear-gradient(135deg, var(--brand-blue-1) 0%, var(--brand-blue-2) 100%);
   color: #fff;
-  box-shadow: 0 6rpx 16rpx rgba(7, 193, 96, 0.25);
+  box-shadow: var(--shadow-button);
 }
 
 .unbind {
-  background: #fff;
-  color: #ff4d4f;
-  border: 1rpx solid #ffccc7;
+  background: #fff5f5;
+  color: #ef4444;
+  border: 1rpx solid #ffd5d2;
 }
 
 .locked-state {
@@ -212,16 +218,16 @@ view, text, image, scroll-view {
 .lock-icon {
   width: 32rpx;
   height: 32rpx;
-  margin-bottom: 4rpx;
+  margin-bottom: calc(var(--space-s) * 0.5);
 }
 .locked-state text {
-  font-size: 20rpx;
-  color: #999;
+  font-size: var(--fz-5);
+  color: var(--ink-soft);
 }
 
 .empty-tip {
   text-align: center;
-  margin-top: 100rpx;
-  color: #ccc;
-  font-size: 28rpx;
+  margin-top: calc(var(--space-l) * 4);
+  color: var(--ink-soft);
+  font-size: var(--fz-3);
 }
