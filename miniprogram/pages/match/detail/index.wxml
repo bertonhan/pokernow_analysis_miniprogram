@@ -63,11 +63,23 @@ module.exports.getTagClass = getTagClass;
       </view>
 
       <view class="section-subtitle">按盈利排序</view>
+
+      <view class="ai-test-row" wx:if="{{statsList.length > 0}}">
+        <view class="ai-test-btn" bindtap="onRunAiQuickTest">
+          {{aiAnalyzing ? 'GejuAI 分析中...' : 'GejuAI 快速分析测试'}}
+        </view>
+      </view>
     </view>
 
     <view wx:if="{{analyzing}}" class="loading-box">
       <view class="loading-spinner"></view>
       <text>AI 正在分析牌局...</text>
+    </view>
+
+    <view class="ai-result-card" wx:if="{{aiResult || aiError}}">
+      <view class="ai-result-title">GejuAI 测试输出</view>
+      <view class="ai-result-error" wx:if="{{aiError}}">{{aiError}}</view>
+      <view class="ai-result-text selectable-text" wx:if="{{aiResult}}">{{aiResult}}</view>
     </view>
 
     <block wx:for="{{statsList}}" wx:key="playerId">

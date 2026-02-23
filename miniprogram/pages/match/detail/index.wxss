@@ -197,6 +197,53 @@ image {
   font-size: var(--fz-5);
 }
 
+.ai-test-row {
+  margin-top: var(--space-m);
+}
+
+.ai-test-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 58rpx;
+  padding: 0 calc(var(--space-m) + var(--space-s));
+  border-radius: var(--radius-pill);
+  background: linear-gradient(135deg, #1f96ff 0%, #1f67ff 100%);
+  color: #ffffff;
+  font-size: var(--fz-5);
+  font-weight: 700;
+  box-shadow: 0 10rpx 20rpx rgba(31, 103, 255, 0.2);
+}
+
+.ai-result-card {
+  margin: var(--space-s) 0 var(--space-m);
+  padding: var(--space-m);
+  border-radius: var(--radius-2);
+  background: #ffffff;
+  box-shadow: 0 8rpx 18rpx rgba(15, 39, 80, 0.06);
+}
+
+.ai-result-title {
+  color: var(--ink-strong);
+  font-size: var(--fz-4);
+  font-weight: 700;
+}
+
+.ai-result-error {
+  margin-top: var(--space-s);
+  color: var(--brand-red);
+  font-size: var(--fz-5);
+  line-height: 1.5;
+}
+
+.ai-result-text {
+  margin-top: var(--space-s);
+  color: var(--ink-base);
+  font-size: var(--fz-5);
+  line-height: 1.75;
+  white-space: pre-wrap;
+}
+
 .loading-box {
   margin: var(--space-s) 0 var(--space-m);
   padding: calc(var(--space-l) + var(--space-s)) var(--space-l);
