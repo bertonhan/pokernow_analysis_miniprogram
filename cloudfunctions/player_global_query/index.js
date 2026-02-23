@@ -8,6 +8,13 @@ const _ = db.command
 const GLOBAL_COLLECTION = 'player_global_stats'
 const BINDING_COLLECTION = 'match_player_bindings'
 const RECENT_MATCH_SINCE_TS = Date.parse('2026-01-01T00:00:00+08:00')
+const LUCK_STYLE_TAGS = {
+  '天选': true,
+  '欧皇': true,
+  '倒霉': true,
+  '非酋': true,
+  '跑马王': true
+}
 
 function toInt(value, fallback) {
   const parsed = parseInt(value, 10)
@@ -125,6 +132,13 @@ function normalizeAliasList(values) {
     out.push(one)
   })
   return out
+}
+
+function filterPlayerStyleTags(values) {
+  return (Array.isArray(values) ? values : [])
+    .map(v => String(v || '').trim())
+    .filter(Boolean)
+    .filter(v => !LUCK_STYLE_TAGS[v])
 }
 
 function normalizeRecentMatches(matches) {
@@ -262,7 +276,7 @@ function buildListItem(doc, rank) {
     vpip: safeNumber(item.vpip),
     pfr: safeNumber(item.pfr),
     af: safeNumber(item.af),
-    styleTags: item.styleTags || [],
+    styleTags: filterPlayerStyleTags(item.styleTags),
     updateTime: item.updateTime || null,
     rank: rank
   }
@@ -371,6 +385,7 @@ async function queryDetail(event) {
 
   const doc = Object.assign({}, res.data[0])
   await resolveAvatarUrls([doc], 'avatarUrl')
+  doc.styleTags = filterPlayerStyleTags(doc.styleTags)
   doc.recentMatches = normalizeRecentMatches(doc.recentMatches)
   doc.recentMatches = await enrichRecentMatchesAliases(doc, doc.recentMatches)
 

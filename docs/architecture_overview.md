@@ -6,8 +6,8 @@
 
 - 前端：原生小程序页面（WXML/WXSS/JS）与 TabBar 导航，负责登录态、对局列表、详情展示、身份绑定、个人资料编辑。
 - 网关：通过 `wx.cloud.callFunction` 调用云函数，不自建传统 HTTP API 服务。
-- 业务后端：云函数拆分为登录、用户管理、对局管理、爬虫采集、数据分析、绑定工具等模块。
-- 数据层：云数据库集合包括 `matches`、`match_hands`、`match_player_bindings`、`users`（以及分析结果集合）。
+- 业务后端：云函数拆分为登录、用户管理、对局管理、爬虫采集、手牌 ETL、数据分析、绑定工具、玩家总榜构建/查询，并包含批处理接力函数。
+- 数据层：云数据库集合包括 `matches`、`match_hands`、`match_hand_facts`、`match_player_bindings`、`match_player_stats`、`player_global_stats`、`users`。
 - 外部数据源：爬虫云函数从 PokerNow 接口抓取手牌日志与账单，持续回写数据库。
 
 ## 2) 架构图（Mermaid）
@@ -16,23 +16,42 @@
 flowchart LR
     U[微信用户] --> MP[小程序前端\nmatch/list detail bind player profile]
 
-    MP -->|wx.cloud.callFunction| CF1[login]
-    MP -->|wx.cloud.callFunction| CF2[user_manager]
-    MP -->|wx.cloud.callFunction| CF3[match_manager]
-    MP -->|wx.cloud.callFunction| CF4[match_analysis]
-    MP -->|wx.cloud.callFunction| CF5[match_bind_tool]
+    MP -->|wx.cloud.callFunction| LOGIN[login]
+    MP -->|wx.cloud.callFunction| USER[user_manager]
+    MP -->|wx.cloud.callFunction| MM[match_manager]
+    MP -->|wx.cloud.callFunction| MA[match_analysis]
+    MP -->|wx.cloud.callFunction| MB[match_bind_tool]
+    MP -->|wx.cloud.callFunction| PGQ[player_global_query]
 
-    CF3 -->|启动/接力| CF6[match_crawler]
-    CF6 -->|拉取日志/账单| PN[PokerNow API]
+    MM -->|新建/恢复对局触发| CRAWLER[match_crawler]
+    CRAWLER -->|抓取手牌日志| PNLOG[PokerNow log_v3 API]
+    CRAWLER -->|同步账单| PNLEDGER[PokerNow players_sessions API]
+    CRAWLER -->|单手结束触发| ETL[match_hand_etl]
+    MM -->|结束对局兜底补算| ETL
+    MA -->|分析前追平最新手牌| ETL
 
-    CF1 --> DB[(Cloud DB)]
-    CF2 --> DB
-    CF3 --> DB
-    CF4 --> DB
-    CF5 --> DB
-    CF6 --> DB
+    ETL_BATCH[match_hand_etl_batch] -->|批量派发| ETL
+    ANALYSIS_BATCH[match_analysis_batch] -->|批量派发| MA
 
-    DB -->|match stats / bindings / users / hands| MP
+    PGQ -->|刷新数据| PGB[player_global_build]
+
+    LOGIN --> USERS[(users)]
+    USER --> USERS
+    MM --> MATCHES[(matches)]
+    CRAWLER --> MATCHES
+    CRAWLER --> HANDS[(match_hands)]
+    ETL --> FACTS[(match_hand_facts)]
+    MA --> STATS[(match_player_stats)]
+    MA --> BINDS[(match_player_bindings)]
+    MB --> BINDS
+    PGB --> GLOBAL[(player_global_stats)]
+
+    MATCHES --> MA
+    FACTS --> MA
+    BINDS --> MA
+    STATS --> PGQ
+    GLOBAL --> PGQ
+    PGQ --> MP
 ```
 
 ## 3) 主要模块职责
@@ -55,8 +74,11 @@ flowchart LR
   - 结束对局时补算真实开始/结束时间；
   - 启停时联动触发 `match_crawler`。
 - `match_crawler`：循环抓取 PokerNow 日志，按手牌写入 `match_hands`，同步账单到 `matches`，具备超时接力与异常自动暂停机制。
+- `match_hand_etl`：将 `match_hands` 原始日志转换为 `match_hand_facts` 基础事实层，支持按单手增量补算和接力。
 - `match_analysis`：读取手牌日志与绑定关系，计算 VPIP/PFR/AF/WTSD/WSD 等统计并写回分析结果。
+- `match_hand_etl_batch` / `match_analysis_batch`：批量任务入口，分片调用 ETL/分析云函数，超时后自动接力。
 - `match_bind_tool`：提供 openid、可绑定格局ID列表、执行绑定与解绑。
+- `player_global_build` / `player_global_query`：构建并查询跨局玩家总榜（`player_global_stats`），支持前端一键刷新。
 
 ## 4) 核心业务流程
 

@@ -10,6 +10,13 @@ const BINDING_COLLECTION = 'match_player_bindings'
 const USER_COLLECTION = 'users'
 const GLOBAL_COLLECTION = 'player_global_stats'
 const RECENT_MATCH_SINCE_TS = Date.parse('2026-01-01T00:00:00+08:00')
+const LUCK_STYLE_TAGS = {
+  '天选': true,
+  '欧皇': true,
+  '倒霉': true,
+  '非酋': true,
+  '跑马王': true
+}
 
 const COUNT_KEYS = [
   'hands',
@@ -57,20 +64,6 @@ const COUNT_KEYS = [
   'charityFails'
 ]
 
-const FALLBACK_RATE_KEYS = [
-  'af',
-  'wtsd',
-  'wsd',
-  'cbet',
-  'bet3',
-  'allIn',
-  'foldTo3Bet',
-  'bet4',
-  'isolate',
-  'foldToFlopCbet',
-  'raiseVsFlopCbet'
-]
-
 function safeNumber(value) {
   const n = Number(value)
   return isNaN(n) ? 0 : n
@@ -83,6 +76,20 @@ function ratio(numerator, denominator) {
 
 function pct(numerator, denominator) {
   return Number((ratio(numerator, denominator) * 100).toFixed(1))
+}
+
+function pctFromCounts(numerator, denominator) {
+  const den = safeNumber(denominator)
+  if (den <= 0) return 0
+  return Number(((safeNumber(numerator) / den) * 100).toFixed(1))
+}
+
+function afFromCounts(stats) {
+  const calls = safeNumber(stats && stats.calls)
+  const attack = safeNumber(stats && stats.bets) + safeNumber(stats && stats.raises)
+  if (calls > 0) return Number((attack / calls).toFixed(2))
+  if (attack > 0) return 10
+  return 0
 }
 
 function toTs(value) {
@@ -104,6 +111,13 @@ function pushUnique(arr, value) {
   const v = String(value || '').trim()
   if (!v) return
   if (arr.indexOf(v) === -1) arr.push(v)
+}
+
+function pushSample(list, item, max) {
+  if (!Array.isArray(list)) return
+  const limit = Math.max(1, max || 12)
+  if (list.length >= limit) return
+  list.push(item)
 }
 
 function toDocId(globalPlayerKey) {
@@ -159,36 +173,25 @@ function resolveRawCounts(row) {
   return { counts: out, hasRaw: false }
 }
 
-function initFallbackRates() {
-  const out = {}
-  FALLBACK_RATE_KEYS.forEach(key => {
-    out[key] = { sum: 0, weight: 0 }
-  })
-  return out
-}
-
-function addFallbackRate(fallback, key, value, weight) {
-  if (!fallback[key]) return
-  const w = safeNumber(weight)
-  const v = safeNumber(value)
-  if (w <= 0) return
-  fallback[key].sum += v * w
-  fallback[key].weight += w
-}
-
-function getFallbackRate(fallback, key, digits) {
-  if (!fallback[key] || !fallback[key].weight) return null
-  const val = fallback[key].sum / fallback[key].weight
-  const d = typeof digits === 'number' ? digits : 1
-  return Number(val.toFixed(d))
-}
-
 function pushTag(styles, tag) {
   if (!tag) return
   if (styles.indexOf(tag) === -1) styles.push(tag)
 }
 
-function generateStyles(stats, net) {
+function isLuckStyleTag(tag) {
+  const key = String(tag || '').trim()
+  if (!key) return false
+  return !!LUCK_STYLE_TAGS[key]
+}
+
+function filterPlayerStyleTags(tags) {
+  return (tags || [])
+    .map(v => String(v || '').trim())
+    .filter(Boolean)
+    .filter(v => !isLuckStyleTag(v))
+}
+
+function generateStyles(stats) {
   const styles = []
 
   const vpip = ratio(stats.vpipHands, stats.hands)
@@ -206,7 +209,6 @@ function generateStyles(stats, net) {
   const foldToFlopCbet = ratio(stats.foldToFlopCbetCount, stats.foldToFlopCbetOpp)
   const raiseVsFlopCbet = ratio(stats.raiseVsFlopCbetCount, stats.raiseVsFlopCbetOpp)
   const pfrByVpip = vpip > 0 ? (pfr / vpip) : 0
-  const luckDiff = safeNumber(stats.luckActualWins) - safeNumber(stats.luckExpectedWins)
   const charityRate = ratio(stats.charityFails, stats.charityAttempts)
 
   if (stats.hands >= 10) {
@@ -231,18 +233,7 @@ function generateStyles(stats, net) {
   if (af >= 2.8) pushTag(styles, '激进')
   else if (af > 0 && af < 0.9) pushTag(styles, '跟注')
 
-  if (stats.luckHands >= 4) {
-    if (luckDiff >= 0.9 || stats.luckAllInDogWins >= 2) pushTag(styles, '天选')
-    else if (luckDiff >= 0.45 || stats.luckGoodHits >= 2) pushTag(styles, '欧皇')
-
-    if (luckDiff <= -0.9 || stats.luckAllInFavLoses >= 2) pushTag(styles, '倒霉')
-    else if (luckDiff <= -0.45 || stats.luckBadBeats >= 2) pushTag(styles, '非酋')
-  }
-
-  if (stats.luckAllInDogWins >= 2) pushTag(styles, '跑马王')
   if (stats.charityAttempts >= 2 && stats.charityFails >= 2 && charityRate >= 0.7) pushTag(styles, '慈善家')
-  if (vpip > 0.40 && net > 5000) pushTag(styles, '天选')
-  if (vpip < 0.30 && net < -5000) pushTag(styles, '倒霉')
 
   if (styles.length === 0) pushTag(styles, '平衡')
   return styles
@@ -297,7 +288,6 @@ function initAggregate(identity, row) {
     recentMatchMap: {},
     styleVoteMap: {},
     counts: makeEmptyCounts(),
-    fallbackRates: initFallbackRates(),
     totalNet: 0,
     rowCount: 0,
     rawReadyRows: 0
@@ -371,67 +361,10 @@ function addRecentMatch(agg, row, matchMeta, gameUserAliasMap) {
   }
 }
 
-function addFallbackRatesByRow(agg, row, hasRaw) {
-  const weight = Math.max(1, safeNumber(row.hands))
-  const metrics = [
-    ['af', row.af],
-    ['wtsd', row.wtsd],
-    ['wsd', row.wsd],
-    ['cbet', row.cbet],
-    ['bet3', row.bet3],
-    ['allIn', row.allIn],
-    ['foldTo3Bet', row.foldTo3Bet],
-    ['bet4', row.bet4],
-    ['isolate', row.isolate],
-    ['foldToFlopCbet', row.foldToFlopCbet],
-    ['raiseVsFlopCbet', row.raiseVsFlopCbet]
-  ]
-
-  if (!hasRaw) {
-    metrics.forEach(one => addFallbackRate(agg.fallbackRates, one[0], one[1], weight))
-    return
-  }
-
-  if (safeNumber(agg.counts.calls) <= 0) addFallbackRate(agg.fallbackRates, 'af', row.af, weight)
-  if (safeNumber(agg.counts.sawFlopHands) <= 0) addFallbackRate(agg.fallbackRates, 'wtsd', row.wtsd, weight)
-  if (safeNumber(agg.counts.showdowns) <= 0) addFallbackRate(agg.fallbackRates, 'wsd', row.wsd, weight)
-  if (safeNumber(agg.counts.cbetOpp) <= 0) addFallbackRate(agg.fallbackRates, 'cbet', row.cbet, weight)
-  if (safeNumber(agg.counts.bet3Opp) <= 0) addFallbackRate(agg.fallbackRates, 'bet3', row.bet3, weight)
-  if (safeNumber(agg.counts.allInCnt) <= 0) addFallbackRate(agg.fallbackRates, 'allIn', row.allIn, weight)
-  if (safeNumber(agg.counts.foldTo3BetOpp) <= 0) addFallbackRate(agg.fallbackRates, 'foldTo3Bet', row.foldTo3Bet, weight)
-  if (safeNumber(agg.counts.bet4Opp) <= 0) addFallbackRate(agg.fallbackRates, 'bet4', row.bet4, weight)
-  if (safeNumber(agg.counts.isolateOpp) <= 0) addFallbackRate(agg.fallbackRates, 'isolate', row.isolate, weight)
-  if (safeNumber(agg.counts.foldToFlopCbetOpp) <= 0) addFallbackRate(agg.fallbackRates, 'foldToFlopCbet', row.foldToFlopCbet, weight)
-  if (safeNumber(agg.counts.raiseVsFlopCbetOpp) <= 0) addFallbackRate(agg.fallbackRates, 'raiseVsFlopCbet', row.raiseVsFlopCbet, weight)
-}
-
-function fallbackOrPct(agg, metric, numerator, denominator, preferFallback) {
-  if (preferFallback) {
-    const fbFirst = getFallbackRate(agg.fallbackRates, metric, 1)
-    if (fbFirst !== null) return fbFirst
-  }
-  if (safeNumber(denominator) > 0) return pct(numerator, denominator)
-  const fb = getFallbackRate(agg.fallbackRates, metric, 1)
-  return fb === null ? 0 : fb
-}
-
-function fallbackOrAf(agg, stats, preferFallback) {
-  if (preferFallback) {
-    const fbFirst = getFallbackRate(agg.fallbackRates, 'af', 2)
-    if (fbFirst !== null) return fbFirst
-  }
-  const calls = safeNumber(stats.calls)
-  const attack = safeNumber(stats.bets) + safeNumber(stats.raises)
-  if (calls > 0) return Number((attack / calls).toFixed(2))
-  if (attack > 0) return 10
-  const fb = getFallbackRate(agg.fallbackRates, 'af', 2)
-  return fb === null ? 0 : fb
-}
-
 function getVotedStyles(styleVoteMap, limit) {
   const ranked = Object.keys(styleVoteMap || {})
     .map(tag => ({ tag: tag, count: safeNumber(styleVoteMap[tag]) }))
-    .filter(item => item.count > 0 && item.tag !== '平衡')
+    .filter(item => item.count > 0 && item.tag !== '平衡' && !isLuckStyleTag(item.tag))
     .sort((a, b) => b.count - a.count)
     .slice(0, Math.max(1, limit || 3))
     .map(item => item.tag)
@@ -620,7 +553,6 @@ async function loadGlobalDocIds() {
 function finalizeAggregate(agg, userProfileMap) {
   const stats = agg.counts
   const gameIds = Object.keys(agg.gameSet || {})
-  const mixedMode = agg.rawReadyRows < agg.rowCount
   const recentMatches = Object.values(agg.recentMatchMap || {})
     .filter(item => safeNumber(item.createTs || item.endTs) >= RECENT_MATCH_SINCE_TS)
     .sort((a, b) => safeNumber(b.createTs || b.endTs) - safeNumber(a.createTs || a.endTs))
@@ -633,27 +565,28 @@ function finalizeAggregate(agg, userProfileMap) {
     : (agg.displayName || '未知选手')
   const avatarUrl = agg.isBound && latestAvatar ? latestAvatar : (agg.avatarUrl || '')
 
-  const styleTagsComputed = generateStyles(stats, agg.totalNet)
+  const styleTagsComputed = filterPlayerStyleTags(generateStyles(stats))
   let styleTags = styleTagsComputed.slice()
   if (styleTags.length === 1 && styleTags[0] === '平衡') {
-    const voted = getVotedStyles(agg.styleVoteMap, 3)
+    const voted = filterPlayerStyleTags(getVotedStyles(agg.styleVoteMap, 3))
     if (voted.length > 0) styleTags = voted
   }
 
-  const af = fallbackOrAf(agg, stats, mixedMode)
-  const vpip = fallbackOrPct(agg, 'vpip', stats.vpipHands, stats.hands, false)
-  const pfr = fallbackOrPct(agg, 'pfr', stats.pfrHands, stats.hands, false)
-  const limp = fallbackOrPct(agg, 'limp', stats.limpHands, stats.hands, false)
-  const bet3 = fallbackOrPct(agg, 'bet3', stats.bet3Count, stats.bet3Opp, mixedMode)
-  const allIn = fallbackOrPct(agg, 'allIn', stats.allInWins, stats.allInCnt, mixedMode)
-  const wtsd = fallbackOrPct(agg, 'wtsd', stats.showdowns, stats.sawFlopHands, mixedMode)
-  const wsd = fallbackOrPct(agg, 'wsd', stats.showdownWins, stats.showdowns, mixedMode)
-  const cbet = fallbackOrPct(agg, 'cbet', stats.cbetCount, stats.cbetOpp, mixedMode)
-  const foldTo3Bet = fallbackOrPct(agg, 'foldTo3Bet', stats.foldTo3BetCount, stats.foldTo3BetOpp, mixedMode)
-  const bet4 = fallbackOrPct(agg, 'bet4', stats.bet4Count, stats.bet4Opp, mixedMode)
-  const isolate = fallbackOrPct(agg, 'isolate', stats.isolateCount, stats.isolateOpp, mixedMode)
-  const foldToFlopCbet = fallbackOrPct(agg, 'foldToFlopCbet', stats.foldToFlopCbetCount, stats.foldToFlopCbetOpp, mixedMode)
-  const raiseVsFlopCbet = fallbackOrPct(agg, 'raiseVsFlopCbet', stats.raiseVsFlopCbetCount, stats.raiseVsFlopCbetOpp, mixedMode)
+  // 统一规则：先汇总分子分母，再计算最终比率，不再使用行级 fallback 均值。
+  const af = afFromCounts(stats)
+  const vpip = pctFromCounts(stats.vpipHands, stats.hands)
+  const pfr = pctFromCounts(stats.pfrHands, stats.hands)
+  const limp = pctFromCounts(stats.limpHands, stats.hands)
+  const bet3 = pctFromCounts(stats.bet3Count, stats.bet3Opp)
+  const allIn = pctFromCounts(stats.allInWins, stats.allInCnt)
+  const wtsd = pctFromCounts(stats.showdowns, stats.sawFlopHands)
+  const wsd = pctFromCounts(stats.showdownWins, stats.showdowns)
+  const cbet = pctFromCounts(stats.cbetCount, stats.cbetOpp)
+  const foldTo3Bet = pctFromCounts(stats.foldTo3BetCount, stats.foldTo3BetOpp)
+  const bet4 = pctFromCounts(stats.bet4Count, stats.bet4Opp)
+  const isolate = pctFromCounts(stats.isolateCount, stats.isolateOpp)
+  const foldToFlopCbet = pctFromCounts(stats.foldToFlopCbetCount, stats.foldToFlopCbetOpp)
+  const raiseVsFlopCbet = pctFromCounts(stats.raiseVsFlopCbetCount, stats.raiseVsFlopCbetOpp)
 
   const record = {
     _id: agg._id,
@@ -758,6 +691,14 @@ exports.main = async (event, context) => {
 
     let scannedRows = 0
     let usedRows = 0
+    const diagnostics = {
+      noRawRows: 0,
+      nonZeroHandsNoRawRows: 0,
+      zeroHandsRows: 0,
+      zeroHandsWithNetRows: 0,
+      rawButAdvancedDenominatorZeroRows: 0,
+      samples: []
+    }
 
     while (offset < totalStatsRows) {
       const batch = await db.collection(PLAYER_STATS_COLLECTION)
@@ -832,11 +773,57 @@ exports.main = async (event, context) => {
 
         const rawRes = resolveRawCounts(effectiveRow)
         if (rawRes.hasRaw) agg.rawReadyRows += 1
+        else {
+          diagnostics.noRawRows += 1
+          if (hands > 0) {
+            diagnostics.nonZeroHandsNoRawRows += 1
+            pushSample(diagnostics.samples, {
+              type: 'noRawWithHands',
+              gameId: gameId,
+              playerId: String(effectiveRow.playerId || ''),
+              playerName: String(effectiveRow.playerName || ''),
+              hands: hands
+            }, 20)
+          }
+        }
+
+        if (hands <= 0) {
+          diagnostics.zeroHandsRows += 1
+          if (Math.abs(net) > 0) {
+            diagnostics.zeroHandsWithNetRows += 1
+            pushSample(diagnostics.samples, {
+              type: 'zeroHandsButHasNet',
+              gameId: gameId,
+              playerId: String(effectiveRow.playerId || ''),
+              playerName: String(effectiveRow.playerName || ''),
+              net: net
+            }, 20)
+          }
+        }
+
+        if (rawRes.hasRaw) {
+          const denSum =
+            safeNumber(rawRes.counts.calls) +
+            safeNumber(rawRes.counts.bet3Opp) +
+            safeNumber(rawRes.counts.cbetOpp) +
+            safeNumber(rawRes.counts.sawFlopHands) +
+            safeNumber(rawRes.counts.showdowns)
+          if (safeNumber(rawRes.counts.hands) > 0 && denSum <= 0) {
+            diagnostics.rawButAdvancedDenominatorZeroRows += 1
+            pushSample(diagnostics.samples, {
+              type: 'rawNoAdvancedDenominator',
+              gameId: gameId,
+              playerId: String(effectiveRow.playerId || ''),
+              playerName: String(effectiveRow.playerName || ''),
+              hands: safeNumber(rawRes.counts.hands)
+            }, 20)
+          }
+        }
+
         COUNT_KEYS.forEach(key => {
           agg.counts[key] += safeNumber(rawRes.counts[key])
         })
         if (agg.counts.hands <= 0 && hands > 0) agg.counts.hands = hands
-        addFallbackRatesByRow(agg, effectiveRow, rawRes.hasRaw)
       })
 
       if (rows.length < MAX_LIMIT) break
@@ -845,8 +832,38 @@ exports.main = async (event, context) => {
 
     const finalRecords = Object.keys(aggMap).map(key => finalizeAggregate(aggMap[key], userProfileMap))
     finalRecords.sort((a, b) => safeNumber(b.totalNet) - safeNumber(a.totalNet))
+    const suspiciousGlobalPlayers = finalRecords
+      .filter(one => {
+        const raw = one && one.rawCounts ? one.rawCounts : {}
+        const hands = safeNumber(raw.hands)
+        if (hands <= 0) return false
+        const denSum =
+          safeNumber(raw.calls) +
+          safeNumber(raw.bet3Opp) +
+          safeNumber(raw.cbetOpp) +
+          safeNumber(raw.sawFlopHands) +
+          safeNumber(raw.showdowns)
+        return denSum <= 0
+      })
+      .slice(0, 20)
+      .map(one => ({
+        globalPlayerKey: one.globalPlayerKey,
+        displayName: one.displayName,
+        hands: safeNumber(one.hands),
+        af: safeNumber(one.af),
+        bet3: safeNumber(one.bet3),
+        cbet: safeNumber(one.cbet),
+        wtsd: safeNumber(one.wtsd),
+        wsd: safeNumber(one.wsd)
+      }))
 
     const persistResult = await persistGlobalRecords(finalRecords)
+    console.log('[player_global_build] 指标聚合诊断:', {
+      scannedRows: scannedRows,
+      usedRows: usedRows,
+      diagnostics: diagnostics,
+      suspiciousGlobalPlayers: suspiciousGlobalPlayers
+    })
 
     return {
       code: 1,
@@ -859,6 +876,14 @@ exports.main = async (event, context) => {
         globalPlayers: finalRecords.length,
         written: persistResult.written,
         staleRemoved: persistResult.staleRemoved,
+        diagnostics: {
+          noRawRows: diagnostics.noRawRows,
+          nonZeroHandsNoRawRows: diagnostics.nonZeroHandsNoRawRows,
+          zeroHandsRows: diagnostics.zeroHandsRows,
+          zeroHandsWithNetRows: diagnostics.zeroHandsWithNetRows,
+          rawButAdvancedDenominatorZeroRows: diagnostics.rawButAdvancedDenominatorZeroRows,
+          suspiciousGlobalPlayers: suspiciousGlobalPlayers.length
+        },
         durationMs: Date.now() - startedAt
       }
     }
