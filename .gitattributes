@@ -1,0 +1,25 @@
+# ===== 默认：文本自动识别，统一使用 LF 换行（强烈推荐）=====
+* text=auto eol=lf
+
+# ===== 小程序常见文本文件：明确当文本处理 =====
+*.js    text eol=lf
+*.ts    text eol=lf
+*.json  text eol=lf
+*.wxml  text eol=lf
+*.wxss  text eol=lf
+*.wxs   text eol=lf
+*.md    text eol=lf
+*.yml   text eol=lf
+*.yaml  text eol=lf
+
+# ===== 二进制资源：禁止文本化 diff/合并 =====
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.gif   binary
+*.webp  binary
+*.svg   binary
+*.mp4   binary
+*.mov   binary
+*.zip   binary
+*.pdf   binary
