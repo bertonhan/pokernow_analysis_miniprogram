@@ -1,14 +1,18 @@
 <view class="container">
 
-<block wx:if="{{isLoggedIn}}">
+<block wx:if="{{!authChecking && isLoggedIn}}">
   <view class="panel-create">
-    <view class="panel-head">
-      <text class="panel-title">对局控制台</text>
-      <text class="panel-subtitle">创建新对局并实时追踪手牌记录</text>
-    </view>
-    <view class="add-box">
-      <input class="link-input" placeholder="粘贴 PokerNow 对局链接" bindinput="onInputLink" value="{{inputLink}}"></input>
-      <view class="add-btn" bindtap="createMatch" hover-class="btn-hover">新建</view>
+    <view class="panel-deco panel-deco-a"></view>
+    <view class="panel-deco panel-deco-b"></view>
+    <view class="panel-main">
+      <view class="panel-head">
+        <text class="panel-title">对局控制台</text>
+        <text class="panel-subtitle">创建新对局并实时追踪手牌记录</text>
+      </view>
+      <view class="add-box">
+        <input class="link-input" placeholder="粘贴 PokerNow 对局链接" bindinput="onInputLink" value="{{inputLink}}"></input>
+        <view class="add-btn" bindtap="createMatch" hover-class="btn-hover">新建</view>
+      </view>
     </view>
   </view>
 
@@ -19,11 +23,12 @@
 
   <scroll-view wx:else scroll-y class="list-area">
     <block wx:for="{{matchList}}" wx:key="_id">
-      <movable-area class="swipe-area">
-        <movable-view class="swipe-content" direction="horizontal" inertia="true" out-of-bounds="true" damping="100" x="{{item.x}}" data-index="{{index}}" bindtouchend="onSwipeEnd" disabled="{{!isAdmin}}">
+      <movable-area class="swipe-area" wx:if="{{isAdmin}}">
+        <movable-view class="swipe-content" direction="horizontal" inertia="false" out-of-bounds="false" damping="100" x="{{item.x}}" data-index="{{index}}" bindchange="onSwipeChange" bindtouchend="onSwipeEnd" disabled="{{!isAdmin}}">
           <view class="swipe-wrapper">
             <view class="card-outer">
               <view class="card {{item.status=='记录中' ? 'card-running' : (item.status=='已暂停' ? 'card-paused' : 'card-ended')}}">
+                <view class="card-glow"></view>
                 <view class="card-header">
                   <view class="title-group">
                     <text class="match-name">{{item.name}}</text>
@@ -91,15 +96,91 @@
           </view>
         </movable-view>
       </movable-area>
+
+      <view class="swipe-area" wx:else>
+        <view class="card-outer">
+          <view class="card {{item.status=='记录中' ? 'card-running' : (item.status=='已暂停' ? 'card-paused' : 'card-ended')}}">
+            <view class="card-glow"></view>
+            <view class="card-header">
+              <view class="title-group">
+                <text class="match-name">{{item.name}}</text>
+                <text class="match-id">ID {{item.gameId}}</text>
+              </view>
+              <view class="status-tag {{item.status=='记录中' ? 'running' : (item.status=='已暂停' ? 'paused' : 'ended')}}">
+                <view wx:if="{{item.status=='记录中'}}" class="dot"></view>
+                {{item.status}}
+              </view>
+            </view>
+
+            <view class="card-meta">
+              <view class="data-row">
+                <view class="icon-wrap">
+                  <image class="data-icon" src="https://img.icons8.com/ios-glyphs/60/000000/time.png"></image>
+                </view>
+                <block wx:if="{{item.status == '已结束'}}">
+                  <text class="data-text">{{item.realStartTime || item.createTime}} ~ {{item.realEndTime || '?'}}</text>
+                </block>
+                <block wx:else>
+                  <text class="data-text">{{item.realStartTime || item.createTime}}<text wx:if="{{item.status=='记录中'}}" class="running-text"> Running...</text></text>
+                </block>
+              </view>
+
+              <view class="data-row hand-row">
+                <view class="icon-wrap">
+                  <image class="data-icon" src="https://img.icons8.com/ios-glyphs/60/000000/activity-feed.png"></image>
+                </view>
+                <text class="data-text bold">Hand #{{item.currentHandNumber}}</text>
+              </view>
+            </view>
+
+            <view class="action-row">
+              <view class="action-left">
+                <view class="btn-capsule blue" bindtap="viewMatch" data-id="{{item.gameId}}" hover-class="capsule-hover">详情</view>
+                <view class="btn-capsule cyan" catchtap="goToBind" data-id="{{item.gameId}}" hover-class="capsule-hover">绑定</view>
+              </view>
+
+              <view class="action-right">
+                <view 
+                  wx:if="{{item.status !== '已结束'}}" 
+                  class="btn-capsule {{item.status=='记录中' ? 'orange' : 'green'}}" 
+                  bindtap="toggleUpdate" 
+                  data-index="{{index}}" 
+                  hover-class="capsule-hover"
+                >
+                  {{item.status=='记录中' ? '暂停' : '更新'}}
+                </view>
+
+                <view 
+                  wx:if="{{item.status !== '记录中' && item.status !== '已结束'}}" 
+                  class="btn-capsule red" 
+                  bindtap="endMatch" 
+                  data-id="{{item.gameId}}" 
+                  hover-class="capsule-hover"
+                >
+                  结束
+                </view>
+              </view>
+            </view>
+          </view>
+        </view>
+      </view>
     </block>
+    <view class="list-footer">没有更多了</view>
     <view class="list-bottom-space"></view>
   </scroll-view>
 </block>
 
-<view class="empty-state" wx:else>
+<view class="empty-state" wx:elif="{{!authChecking}}">
   <image class="empty-icon" src="https://img.icons8.com/ios/100/cccccc/lock.png"></image>
   <view class="empty-text">请登录后查看对局记录</view>
   <button class="login-jump-btn" bindtap="goToProfile">去登录</button>
+</view>
+
+<view wx:if="{{authChecking}}" class="global-auth-mask">
+  <view class="global-auth-mask__panel">
+    <view class="global-auth-spinner"></view>
+    <text class="global-auth-text">正在校验登录状态...</text>
+  </view>
 </view>
 
 </view>

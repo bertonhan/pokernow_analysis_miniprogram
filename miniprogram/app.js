@@ -4,6 +4,8 @@ App({
     isLoggedIn: false, // 是否登录
     userInfo: null,    // 用户信息
     hasCheckedLogin: false, // 【新增】标记：是否已经执行过初始化检查
+    loginCheckInFlight: false,
+    loginCheckCallbacks: [],
     openid: null,
     openidReady: false,
     openidCallbacks: []
@@ -59,26 +61,46 @@ App({
 
   checkLoginStatus: function (callback) {
     const that = this;
+    const cb = typeof callback === 'function' ? callback : null
+
+    if (that.globalData.hasCheckedLogin) {
+      if (cb) cb(that.globalData.isLoggedIn)
+      return
+    }
+
+    if (cb) that.globalData.loginCheckCallbacks.push(cb)
+
+    if (that.globalData.loginCheckInFlight) return
+
+    that.globalData.loginCheckInFlight = true
+
     wx.cloud.callFunction({
       name: 'user_manager',
       data: { action: 'get' },
       success: res => {
-        // 无论成功还是失败，都标记为“已检查过”
-        that.globalData.hasCheckedLogin = true; 
-
-        if (res.result.data) {
-          that.globalData.isLoggedIn = true;
-          that.globalData.userInfo = res.result.data;
-        } else {
-          that.globalData.isLoggedIn = false;
-          that.globalData.userInfo = null;
-        }
-        if (callback) callback(that.globalData.isLoggedIn);
+        const userData = res && res.result ? res.result.data : null
+        that.finishLoginCheck(!!userData, userData || null)
       },
       fail: err => {
-        console.error('登录检查失败', err);
-        that.globalData.hasCheckedLogin = true; // 失败也算检查过
-        if (callback) callback(false);
+        console.error('登录检查失败', err)
+        that.finishLoginCheck(false, null)
+      }
+    })
+  },
+
+  finishLoginCheck: function (isLoggedIn, userInfo) {
+    this.globalData.hasCheckedLogin = true
+    this.globalData.loginCheckInFlight = false
+    this.globalData.isLoggedIn = !!isLoggedIn
+    this.globalData.userInfo = isLoggedIn ? (userInfo || null) : null
+
+    const callbacks = this.globalData.loginCheckCallbacks || []
+    this.globalData.loginCheckCallbacks = []
+    callbacks.forEach(fn => {
+      try {
+        fn(this.globalData.isLoggedIn)
+      } catch (e) {
+        console.error('[app] login callback error', e)
       }
     })
   }

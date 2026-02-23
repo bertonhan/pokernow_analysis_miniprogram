@@ -4,6 +4,7 @@ const defaultAvatar = 'https://mmbiz.qpic.cn/mmbiz/icTdbqWNOwNRna42FI242Lcia07jQ
 Page({
   data: {
     defaultAvatar: defaultAvatar,
+    authChecking: true,
     
     // 状态控制
     isLoggedIn: false,   // 是否已登录
@@ -35,13 +36,13 @@ Page({
   // === 核心逻辑：检查用户状态 ===
   checkCloudUser() {
     const app = getApp(); // 获取全局实例
-    wx.showLoading({ title: '加载中' })
+    this.setData({ authChecking: true })
     
     // 直接复用 app.js 里的检查方法，省得写两遍
     app.checkLoginStatus((isLoggedIn) => {
-      wx.hideLoading();
       if (isLoggedIn) {
         this.setData({
+          authChecking: false,
           isLoggedIn: true,
           userInfo: app.globalData.userInfo, // 从全局拿
           // 同步表单数据
@@ -50,7 +51,10 @@ Page({
           gejuId: app.globalData.userInfo.gejuId
         })
       } else {
-        this.setData({ isLoggedIn: false })
+        this.setData({
+          authChecking: false,
+          isLoggedIn: false
+        })
       }
     });
   },

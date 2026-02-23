@@ -14,27 +14,57 @@ page {
   --ink-strong: #15253e;
   --ink-normal: #5b6b84;
   --ink-soft: #8c98a8;
-  background: linear-gradient(180deg, #e9f1ff 0%, #f4f8ff 34%, #eef3f8 100%);
+  background: linear-gradient(180deg, #edf4ff 0%, #f7faff 36%, #eef4ff 100%);
 }
 
 .container {
-  min-height: 100vh;
+  height: 100vh;
   display: flex;
   flex-direction: column;
   padding: var(--space-l) 0 0;
   box-sizing: border-box;
   font-family: var(--font-body);
+  overflow: hidden;
 }
 
 .panel-create {
+  position: relative;
+  overflow: hidden;
   width: calc(100vw - 40rpx);
   margin: 0 auto var(--space-m);
   padding: var(--space-l);
   border-radius: var(--radius-3);
   border: 0;
-  background: linear-gradient(145deg, #ffffff 0%, #f2f8ff 58%, #eaf4ff 100%);
-  box-shadow: 0 10rpx 24rpx rgba(21, 54, 104, 0.09);
+  background: linear-gradient(145deg, #ffffff 0%, #eef6ff 58%, #e6f1ff 100%);
+  box-shadow: 0 10rpx 24rpx rgba(34, 79, 139, 0.09);
   box-sizing: border-box;
+}
+
+.panel-deco {
+  position: absolute;
+  border-radius: var(--radius-pill);
+  pointer-events: none;
+}
+
+.panel-deco-a {
+  width: 260rpx;
+  height: 260rpx;
+  right: -95rpx;
+  top: -110rpx;
+  background: radial-gradient(circle, rgba(48, 147, 255, 0.3) 0%, rgba(48, 147, 255, 0) 72%);
+}
+
+.panel-deco-b {
+  width: 200rpx;
+  height: 200rpx;
+  left: -75rpx;
+  bottom: -88rpx;
+  background: radial-gradient(circle, rgba(27, 188, 148, 0.2) 0%, rgba(27, 188, 148, 0) 72%);
+}
+
+.panel-main {
+  position: relative;
+  z-index: 1;
 }
 
 .panel-head {
@@ -64,19 +94,20 @@ page {
   padding: var(--space-s) var(--space-s) var(--space-s) var(--space-m);
   border-radius: var(--radius-1);
   border: 0;
-  background: #f5f8fd;
+  background: rgba(255, 255, 255, 0.9);
   box-sizing: border-box;
 }
 
 .link-input {
   flex: 1;
   height: 56rpx;
-  font-size: var(--fz-3);
+  font-size: var(--fz-4);
   color: #3f5674;
 }
 
 .add-btn {
-  min-width: 102rpx;
+  flex-shrink: 0;
+  min-width: 100rpx;
   height: var(--btn-h);
   line-height: var(--btn-h);
   padding: 0 var(--btn-pad-x);
@@ -86,8 +117,8 @@ page {
   color: #ffffff;
   font-size: var(--btn-font-size);
   font-weight: 700;
+  white-space: nowrap;
   box-shadow: 0 10rpx 22rpx rgba(31, 103, 255, 0.28);
-  box-sizing: border-box;
 }
 
 .btn-hover {
@@ -120,7 +151,8 @@ page {
 }
 
 .list-area {
-  height: calc(100vh - 230rpx);
+  flex: 1;
+  min-height: 0;
 }
 
 .swipe-area {
@@ -131,7 +163,7 @@ page {
 }
 
 .swipe-content {
-  width: calc(100vw + var(--delete-reveal));
+  width: calc(100vw + var(--delete-reveal, 160rpx));
   height: 100%;
 }
 
@@ -149,6 +181,8 @@ page {
 }
 
 .card {
+  position: relative;
+  overflow: hidden;
   height: 100%;
   display: flex;
   flex-direction: column;
@@ -156,24 +190,54 @@ page {
   padding: var(--space-l) var(--space-m);
   border-radius: var(--radius-3);
   border: 0;
-  background: linear-gradient(160deg, #ffffff 0%, #f6faff 100%);
-  box-shadow: 0 10rpx 24rpx rgba(15, 39, 80, 0.07);
+  background: linear-gradient(160deg, #ffffff 0%, #f5f9ff 100%);
+  box-shadow: none;
   box-sizing: border-box;
 }
 
 .card-running {
-  background: linear-gradient(160deg, #ffffff 0%, #f4fbf7 100%);
-  box-shadow: 0 10rpx 24rpx rgba(7, 185, 92, 0.1);
+  background: linear-gradient(160deg, #ffffff 0%, #f1fbf6 100%);
+  box-shadow: none;
 }
 
 .card-paused {
-  background: linear-gradient(160deg, #ffffff 0%, #fffaf2 100%);
-  box-shadow: 0 10rpx 24rpx rgba(240, 162, 58, 0.1);
+  background: linear-gradient(160deg, #ffffff 0%, #fffaf3 100%);
+  box-shadow: none;
 }
 
 .card-ended {
-  background: linear-gradient(160deg, #ffffff 0%, #f6faff 100%);
-  box-shadow: 0 10rpx 24rpx rgba(15, 39, 80, 0.07);
+  background: linear-gradient(160deg, #ffffff 0%, #f3f8ff 100%);
+  box-shadow: none;
+}
+
+.card-glow {
+  position: absolute;
+  right: -44rpx;
+  top: -44rpx;
+  width: 150rpx;
+  height: 150rpx;
+  border-radius: var(--radius-pill);
+  background: radial-gradient(circle, rgba(54, 149, 255, 0.18) 0%, rgba(54, 149, 255, 0) 72%);
+  pointer-events: none;
+}
+
+.card-running .card-glow {
+  background: radial-gradient(circle, rgba(24, 191, 105, 0.22) 0%, rgba(24, 191, 105, 0) 72%);
+}
+
+.card-paused .card-glow {
+  background: radial-gradient(circle, rgba(255, 172, 79, 0.2) 0%, rgba(255, 172, 79, 0) 72%);
+}
+
+.card-ended .card-glow {
+  background: radial-gradient(circle, rgba(108, 147, 206, 0.2) 0%, rgba(108, 147, 206, 0) 72%);
+}
+
+.card-header,
+.card-meta,
+.action-row {
+  position: relative;
+  z-index: 1;
 }
 
 .card-header {
@@ -253,20 +317,20 @@ page {
   margin-top: var(--space-m);
   padding: var(--space-m) var(--space-m) var(--space-s);
   border-radius: var(--radius-1);
-  background: #f2f6fb;
+  background: #f3f7fd;
   box-sizing: border-box;
 }
 
 .card-running .card-meta {
-  background: #f1f9f4;
+  background: #eef8f3;
 }
 
 .card-paused .card-meta {
-  background: #fff8ec;
+  background: #fff8ef;
 }
 
 .card-ended .card-meta {
-  background: #f2f6fb;
+  background: #f3f7fd;
 }
 
 .data-row {
@@ -347,27 +411,27 @@ page {
 
 .btn-capsule.blue {
   color: #1b5cbf;
-  background: linear-gradient(135deg, #e8f1ff 0%, #dfeeff 100%);
+  background: linear-gradient(135deg, #e8f1ff 0%, #deedff 100%);
 }
 
 .btn-capsule.cyan {
   color: #0f8ea0;
-  background: #e8f7fa;
+  background: #e8f8fb;
 }
 
 .btn-capsule.orange {
   color: #b4650c;
-  background: #fff6e8;
+  background: #fff5e7;
 }
 
 .btn-capsule.green {
   color: #148a41;
-  background: #ecfdf3;
+  background: #e9fcf1;
 }
 
 .btn-capsule.red {
   color: #d1556b;
-  background: #ffedf1;
+  background: #ffedf2;
 }
 
 .capsule-hover {
@@ -376,7 +440,7 @@ page {
 }
 
 .delete-btn {
-  width: var(--delete-reveal);
+  width: var(--delete-reveal, 160rpx);
   height: 100%;
   border-top-right-radius: var(--radius-2);
   border-bottom-right-radius: var(--radius-2);
@@ -387,11 +451,18 @@ page {
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: -8rpx 0 16rpx rgba(255, 109, 134, 0.24);
+  box-shadow: none;
+}
+
+.list-footer {
+  text-align: center;
+  color: #7f8ea3;
+  font-size: var(--fz-4);
+  padding: var(--space-m) 0 calc(var(--space-l) + var(--space-s));
 }
 
 .list-bottom-space {
-  height: 32rpx;
+  height: var(--space-s);
 }
 
 .empty-state {

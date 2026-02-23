@@ -1,13 +1,21 @@
+page {
+  background: linear-gradient(180deg, #e9f1ff 0%, #f4f8ff 34%, #eef3f8 100%);
+}
+
 .container {
   display: flex;
   flex-direction: column;
   align-items: stretch;
   width: 100%;
-  min-height: 100vh;
+  height: 100vh;
   padding: var(--space-l) var(--space-l) 0;
   box-sizing: border-box;
   font-family: var(--font-body);
-  background: linear-gradient(180deg, #e9f1ff 0%, #f4f8ff 34%, #eef3f8 100%);
+  overflow: hidden;
+}
+
+.top-fixed-zone {
+  flex-shrink: 0;
 }
 
 .hero-card {
@@ -108,7 +116,7 @@
 
 .build-btn {
   flex-shrink: 0;
-  min-width: 170rpx;
+  min-width: 100rpx;
   height: var(--btn-h);
   line-height: var(--btn-h);
   padding: 0 var(--btn-pad-x);
@@ -186,10 +194,9 @@
 
 .list-scroll {
   margin-top: var(--space-m);
-  flex: 1;
-  min-height: 0;
-  padding-bottom: var(--space-s);
+  min-height: 320rpx;
   box-sizing: border-box;
+  background: transparent;
 }
 
 .player-card {
@@ -200,7 +207,7 @@
   border-radius: var(--radius-3);
   padding: var(--space-m);
   margin-bottom: var(--space-m);
-  box-shadow: 0 10rpx 24rpx rgba(15, 39, 80, 0.07);
+  box-shadow: none;
 }
 
 .card-glow {
@@ -433,6 +440,10 @@
   padding: var(--space-m) 0 calc(var(--space-l) + var(--space-s));
 }
 
+.list-bottom-space {
+  height: calc(var(--space-l) + var(--space-s));
+}
+
 .empty-state {
   display: flex;
   flex-direction: column;
@@ -442,10 +453,10 @@
 }
 
 .empty-icon {
-  width: 128rpx;
-  height: 128rpx;
+  width: 120rpx;
+  height: 120rpx;
   margin-bottom: var(--space-l);
-  opacity: 0.82;
+  opacity: 0.72;
 }
 
 .empty-text {

@@ -1,4 +1,5 @@
 const cloud = require('wx-server-sdk')
+const { URL } = require('url')
 
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 const db = cloud.database()
@@ -16,6 +17,96 @@ function toInt(value, fallback) {
 function safeNumber(value) {
   const num = Number(value)
   return isNaN(num) ? 0 : num
+}
+
+function isHttpUrl(value) {
+  return /^https?:\/\//i.test(String(value || '').trim())
+}
+
+function parseAvatarCandidate(raw) {
+  const source = String(raw || '').trim()
+  if (!source) return { source: '', fileId: '', fallback: '', finalUrl: '' }
+
+  if (source.indexOf('cloud://') === 0) {
+    return { source: source, fileId: source, fallback: '', finalUrl: '' }
+  }
+
+  if (!isHttpUrl(source)) {
+    return { source: source, fileId: '', fallback: '', finalUrl: '' }
+  }
+
+  try {
+    const parsed = new URL(source)
+    const bareUrl = parsed.origin + parsed.pathname
+    const isTcbDomain = /\.tcb\.qcloud\.la$/i.test(parsed.hostname)
+    if (!isTcbDomain) {
+      return { source: source, fileId: '', fallback: source, finalUrl: source }
+    }
+
+    const env = String(cloud.DYNAMIC_CURRENT_ENV || '').trim()
+    const bucket = parsed.hostname.replace(/\.tcb\.qcloud\.la$/i, '')
+    const hasPath = !!parsed.pathname
+    const fileId = (env && bucket && hasPath)
+      ? ('cloud://' + env + '.' + bucket + parsed.pathname)
+      : ''
+
+    return {
+      source: source,
+      fileId: fileId,
+      fallback: bareUrl,
+      finalUrl: bareUrl
+    }
+  } catch (e) {
+    return { source: source, fileId: '', fallback: '', finalUrl: '' }
+  }
+}
+
+async function resolveAvatarUrls(list, fieldName) {
+  const rows = Array.isArray(list) ? list : []
+  if (rows.length === 0) return
+
+  const field = String(fieldName || 'avatarUrl')
+  const parsedRows = rows.map(row => {
+    const avatarRaw = row ? row[field] : ''
+    const parsed = parseAvatarCandidate(avatarRaw)
+    return { row: row, parsed: parsed }
+  })
+
+  const fileList = []
+  const seen = {}
+  parsedRows.forEach(item => {
+    const fileId = item.parsed.fileId
+    if (!fileId || seen[fileId]) return
+    seen[fileId] = true
+    fileList.push(fileId)
+  })
+
+  const tempUrlMap = {}
+  if (fileList.length > 0) {
+    try {
+      const tempRes = await cloud.getTempFileURL({ fileList: fileList })
+      ;(tempRes.fileList || []).forEach(one => {
+        if (!one || one.status !== 0 || !one.fileID || !one.tempFileURL) return
+        tempUrlMap[one.fileID] = one.tempFileURL
+      })
+    } catch (e) {
+      console.error('[player_global_query] 头像临时链接转换失败:', e.message)
+    }
+  }
+
+  parsedRows.forEach(item => {
+    if (!item.row) return
+    const parsed = item.parsed
+    let nextAvatar = ''
+    if (parsed.fileId && tempUrlMap[parsed.fileId]) {
+      nextAvatar = tempUrlMap[parsed.fileId]
+    } else if (parsed.fallback) {
+      nextAvatar = parsed.fallback
+    } else {
+      nextAvatar = parsed.finalUrl || ''
+    }
+    item.row[field] = nextAvatar
+  })
 }
 
 function toTs(value) {
@@ -213,6 +304,7 @@ async function queryList(event) {
     .field(fieldMap)
     .get()
   const rows = listRes.data || []
+  await resolveAvatarUrls(rows, 'avatarUrl')
 
   const data = rows.map((item, idx) => buildListItem(item, skip + idx + 1))
 
@@ -278,6 +370,7 @@ async function queryDetail(event) {
   }
 
   const doc = Object.assign({}, res.data[0])
+  await resolveAvatarUrls([doc], 'avatarUrl')
   doc.recentMatches = normalizeRecentMatches(doc.recentMatches)
   doc.recentMatches = await enrichRecentMatchesAliases(doc, doc.recentMatches)
 

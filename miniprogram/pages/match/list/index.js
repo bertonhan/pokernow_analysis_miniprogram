@@ -1,9 +1,11 @@
 // miniprogram/pages/match/list/index.js
 const app = getApp()
-const ADMIN_LIST = [ 'oVJBv3Z6GzqygarChiUpuMfpPUxw' ]
+const ADMIN_LIST = [ 'oVJBv3Z6GzqygarChiUpuMfpPUxw','oVJBv3ZQeK89wBj07zNfqYs9mdN0' ]
+const DELETE_REVEAL_RPX = 160
 
 Page({
   data: {
+    authChecking: true,
     isLoggedIn: false, 
     inputLink: '',
     matchList: [],
@@ -12,19 +14,40 @@ Page({
   },
 
   // === 1. 滑动交互 (修复：只保留这一个定义) ===
-  onSwipeEnd(e) {
-    const { x } = e.detail
+  onSwipeChange(e) {
     const index = e.currentTarget.dataset.index
-    const btnWidth = 80 
-    
-    if (x < -btnWidth / 2) {
-      this.setData({ [`matchList[${index}].x`]: -btnWidth * 2 })
-    } else {
-      this.setData({ [`matchList[${index}].x`]: 0 })
-    }
+    const x = Number(e && e.detail ? e.detail.x : NaN)
+    if (index === undefined || Number.isNaN(x)) return
+    if (!this._swipeXCache) this._swipeXCache = {}
+    this._swipeXCache[index] = x
   },
 
-  onLoad() { this.checkAdmin() },
+  onSwipeEnd(e) {
+    const index = e.currentTarget.dataset.index
+    const cachedX = this._swipeXCache ? Number(this._swipeXCache[index]) : NaN
+    const currentX = !Number.isNaN(cachedX)
+      ? cachedX
+      : Number(((this.data.matchList || [])[index] || {}).x || 0)
+    const revealPx = this.deleteRevealPx || 80
+    const shouldOpen = currentX <= -revealPx / 2
+    const nextX = shouldOpen ? -revealPx : 0
+
+    const nextState = { [`matchList[${index}].x`]: nextX }
+    // 保持交互干净：只允许一张卡片处于展开状态
+    ;(this.data.matchList || []).forEach((item, i) => {
+      if (i !== index && Number(item.x || 0) !== 0) {
+        nextState[`matchList[${i}].x`] = 0
+      }
+    })
+
+    this.setData(nextState)
+    if (this._swipeXCache) this._swipeXCache[index] = nextX
+  },
+
+  onLoad() {
+    this.initSwipeConfig()
+    this.checkAdmin()
+  },
 
   onShow() {
     if (this.getTabBar && this.getTabBar()) {
@@ -35,27 +58,19 @@ Page({
 
   // === 2. 权限与加载 ===
   checkAccess() {
-    if (app.globalData.isLoggedIn) {
-      this.setData({ isLoggedIn: true });
-      this.checkAdmin();
-      this.loadList();
-      if(!this.timer) this.timer = setInterval(() => { this.loadList() }, 5000);
-    } else if (!app.globalData.hasCheckedLogin) {
-      app.checkLoginStatus((isLoggedIn) => {
-        if (isLoggedIn) {
-           this.setData({ isLoggedIn: true });
-           this.checkAdmin();
-           this.loadList();
-           if(!this.timer) this.timer = setInterval(() => { this.loadList() }, 5000);
-        } else {
-           this.setData({ isLoggedIn: false, matchList: [] });
-           if(this.timer) clearInterval(this.timer); this.timer = null;
-        }
-      });
-    } else {
-      this.setData({ isLoggedIn: false, matchList: [] });
-      if(this.timer) clearInterval(this.timer); this.timer = null;
-    }
+    this.setData({ authChecking: true })
+    app.checkLoginStatus((isLoggedIn) => {
+      this.setData({ authChecking: false })
+      if (isLoggedIn) {
+        this.setData({ isLoggedIn: true });
+        this.checkAdmin();
+        this.loadList();
+        if(!this.timer) this.timer = setInterval(() => { this.loadList() }, 5000);
+      } else {
+        this.setData({ isLoggedIn: false, matchList: [] });
+        if(this.timer) clearInterval(this.timer); this.timer = null;
+      }
+    });
   },
   
   onHide() { if(this.timer) clearInterval(this.timer); this.timer = null; },
@@ -75,17 +90,38 @@ Page({
   },
 
   loadList() {
+    const prevXMap = {}
+    ;(this.data.matchList || []).forEach(item => {
+      const gameId = item && item.gameId
+      if (!gameId) return
+      prevXMap[gameId] = Number(item.x || 0)
+    })
+
     wx.cloud.callFunction({
       name: 'match_manager',
       data: { action: 'list' },
       success: res => {
         // 安全检查，防止 map 报错
         if (res.result && res.result.data) {
-          const newList = res.result.data.map(item => Object.assign({}, item, { x: 0 }))
+          const newList = res.result.data.map(item => {
+            const gameId = item && item.gameId
+            const prevX = gameId ? Number(prevXMap[gameId] || 0) : 0
+            return Object.assign({}, item, { x: prevX })
+          })
           this.setData({ matchList: newList })
         }
       }
     })
+  },
+
+  initSwipeConfig() {
+    try {
+      const win = getWindowMetrics()
+      const windowWidth = Number(win.windowWidth || 375)
+      this.deleteRevealPx = Math.round((DELETE_REVEAL_RPX / 750) * windowWidth)
+    } catch (e) {
+      this.deleteRevealPx = 80
+    }
   },
 
   // === 3. 业务操作 ===
@@ -202,3 +238,16 @@ endMatch(e) {
   },
   goToProfile() { wx.switchTab({ url: '/pages/profile/index' }) }
 })
+
+function getWindowMetrics() {
+  let windowWidth = 0
+  let windowHeight = 0
+  try {
+    if (typeof wx.getWindowInfo === 'function') {
+      const info = wx.getWindowInfo() || {}
+      windowWidth = Number(info.windowWidth || 0)
+      windowHeight = Number(info.windowHeight || 0)
+    }
+  } catch (e) {}
+  return { windowWidth, windowHeight }
+}

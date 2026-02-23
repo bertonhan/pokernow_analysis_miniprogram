@@ -5,7 +5,8 @@ const db = cloud.database()
 const _ = db.command
 
 const ADMIN_LIST = [
-  'oVJBv3Z6GzqygarChiUpuMfpPUxw', 
+  'oVJBv3Z6GzqygarChiUpuMfpPUxw',
+  'oVJBv3ZQeK89wBj07zNfqYs9mdN0' 
   // '你的OpenID'
 ]
 

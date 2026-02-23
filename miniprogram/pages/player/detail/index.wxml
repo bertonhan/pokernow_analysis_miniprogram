@@ -17,6 +17,7 @@
             class="hero-avatar"
             mode="aspectFill"
             src="{{detail.avatarUrl ? detail.avatarUrl : 'https://img.icons8.com/color/96/user-male-circle--v1.png'}}"
+            binderror="onDetailAvatarError"
           ></image>
           <view class="hero-main">
             <view class="hero-name-row">

@@ -1,5 +1,5 @@
 <view class="page-wrap">
-  <view class="container">
+  <view class="container" wx:if="{{!authChecking}}">
     <view class="card login-card" wx:if="{{!isLoggedIn && !showLoginForm}}">
       <view class="card-title">欢迎来到德扑格局</view>
       <view class="card-desc">登录后可同步个人档案，并在复盘时展示统一身份。</view>
@@ -58,6 +58,13 @@
         <button class="btn-default" bindtap="onTapEdit">修改档案</button>
         <button class="btn-danger" bindtap="onTapLogout">退出登录</button>
       </view>
+    </view>
+  </view>
+
+  <view wx:if="{{authChecking}}" class="global-auth-mask">
+    <view class="global-auth-mask__panel">
+      <view class="global-auth-spinner"></view>
+      <text class="global-auth-text">正在校验登录状态...</text>
     </view>
   </view>
 </view>

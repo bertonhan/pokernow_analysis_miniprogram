@@ -2,6 +2,7 @@ const app = getApp()
 
 Page({
   data: {
+    authChecking: true,
     isLoggedIn: false,
     list: [],
     loading: false,
@@ -10,7 +11,12 @@ Page({
     pageSize: 20,
     hasMore: true,
     total: 0,
-    mode: 'bound'
+    mode: 'bound',
+    listAreaHeight: 560
+  },
+
+  onReady() {
+    this.calcListAreaHeight()
   },
 
   onShow() {
@@ -20,26 +26,20 @@ Page({
     this.checkAccess()
   },
 
-  onPullDownRefresh() {
-    this.reloadList(() => wx.stopPullDownRefresh())
+  onResize() {
+    this.calcListAreaHeight()
   },
 
   checkAccess() {
-    if (app.globalData.isLoggedIn) {
-      this.setData({ isLoggedIn: true })
-      this.reloadList()
-      return
-    }
-
-    if (!app.globalData.hasCheckedLogin) {
-      app.checkLoginStatus(isLoggedIn => {
-        this.setData({ isLoggedIn: isLoggedIn })
-        if (isLoggedIn) this.reloadList()
+    this.setData({ authChecking: true })
+    app.checkLoginStatus(isLoggedIn => {
+      this.setData({
+        authChecking: false,
+        isLoggedIn: !!isLoggedIn
       })
-      return
-    }
-
-    this.setData({ isLoggedIn: false })
+      this.calcListAreaHeight()
+      if (isLoggedIn) this.reloadList()
+    })
   },
 
   reloadList(done) {
@@ -152,9 +152,48 @@ Page({
     })
   },
 
+  onPlayerAvatarError(e) {
+    const index = Number(e && e.currentTarget && e.currentTarget.dataset
+      ? e.currentTarget.dataset.index
+      : -1)
+    if (index < 0) return
+    const list = Array.isArray(this.data.list) ? this.data.list.slice() : []
+    if (!list[index]) return
+    if (!list[index].avatarUrl) return
+    list[index].avatarUrl = ''
+    this.setData({ list: list })
+  },
+
   goToProfile() {
     wx.switchTab({
       url: '/pages/profile/index'
+    })
+  },
+
+  calcListAreaHeight() {
+    const win = getWindowMetrics()
+    const windowHeight = Number(win.windowHeight || 0)
+    if (!windowHeight) return
+
+    if (this.data.authChecking || !this.data.isLoggedIn) {
+      const fallback = Math.max(windowHeight - 20, 360)
+      if (Math.abs(fallback - this.data.listAreaHeight) > 1) {
+        this.setData({ listAreaHeight: fallback })
+      }
+      return
+    }
+
+    wx.nextTick(() => {
+      const query = this.createSelectorQuery()
+      query.select('.top-fixed-zone').boundingClientRect()
+      query.exec(res => {
+        const topRect = res && res[0]
+        const topHeight = topRect && topRect.height ? Number(topRect.height) : 0
+        const nextHeight = Math.max(windowHeight - topHeight - 24, 320)
+        if (Math.abs(nextHeight - this.data.listAreaHeight) > 1) {
+          this.setData({ listAreaHeight: Math.floor(nextHeight) })
+        }
+      })
     })
   }
 })
@@ -162,4 +201,17 @@ Page({
 function safeInt(value) {
   const parsed = parseInt(value, 10)
   return Number.isNaN(parsed) ? 0 : parsed
+}
+
+function getWindowMetrics() {
+  let windowWidth = 0
+  let windowHeight = 0
+  try {
+    if (typeof wx.getWindowInfo === 'function') {
+      const info = wx.getWindowInfo() || {}
+      windowWidth = Number(info.windowWidth || 0)
+      windowHeight = Number(info.windowHeight || 0)
+    }
+  } catch (e) {}
+  return { windowWidth, windowHeight }
 }

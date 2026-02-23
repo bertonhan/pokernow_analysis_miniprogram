@@ -166,5 +166,12 @@ Page({
     wx.navigateTo({
       url: '/pages/match/detail/index?id=' + gameId
     })
+  },
+
+  onDetailAvatarError() {
+    if (!this.data.detail || !this.data.detail.avatarUrl) return
+    this.setData({
+      'detail.avatarUrl': ''
+    })
   }
 })

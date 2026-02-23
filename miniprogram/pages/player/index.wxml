@@ -1,28 +1,30 @@
 <view class="container">
 
-<block wx:if="{{isLoggedIn}}">
-  <view class="hero-card">
-    <view class="hero-deco hero-deco-a"></view>
-    <view class="hero-deco hero-deco-b"></view>
-    <view class="hero-main">
-      <view class="title-row">
-        <view class="title-wrap">
-          <view class="title">玩家总榜</view>
-          <view class="subtitle">已绑定跨局聚合，未绑定按每局独立统计</view>
+<block wx:if="{{!authChecking && isLoggedIn}}">
+  <view class="top-fixed-zone">
+    <view class="hero-card">
+      <view class="hero-deco hero-deco-a"></view>
+      <view class="hero-deco hero-deco-b"></view>
+      <view class="hero-main">
+        <view class="title-row">
+          <view class="title-wrap">
+            <view class="title">玩家总榜</view>
+            <view class="subtitle">已绑定展示完整数据，未绑定按每局独立统计</view>
+          </view>
+          <view class="mode-pill">按总盈亏</view>
         </view>
-        <view class="mode-pill">按总盈亏</view>
-      </view>
-      <view class="hero-foot">
-        <view class="summary-pill">共 {{total}} 名玩家</view>
-        <view class="build-btn {{building ? 'is-loading' : ''}}" bindtap="rebuildGlobalStats">{{building ? '刷新中' : '刷新数据'}}</view>
+        <view class="hero-foot">
+          <view class="summary-pill">共 {{total}} 名玩家</view>
+          <view class="build-btn {{building ? 'is-loading' : ''}}" bindtap="rebuildGlobalStats">{{building ? '刷新中' : '刷新'}}</view>
+        </view>
       </view>
     </view>
-  </view>
 
-  <view class="filter-row full-width">
-    <view class="chip {{mode==='all' ? 'active' : ''}}" data-mode="all" bindtap="onModeChange">全部</view>
-    <view class="chip {{mode==='bound' ? 'active' : ''}}" data-mode="bound" bindtap="onModeChange">已绑定</view>
-    <view class="chip {{mode==='solo' ? 'active' : ''}}" data-mode="solo" bindtap="onModeChange">未绑定</view>
+    <view class="filter-row full-width">
+      <view class="chip {{mode==='all' ? 'active' : ''}}" data-mode="all" bindtap="onModeChange">全部</view>
+      <view class="chip {{mode==='bound' ? 'active' : ''}}" data-mode="bound" bindtap="onModeChange">已绑定</view>
+      <view class="chip {{mode==='solo' ? 'active' : ''}}" data-mode="solo" bindtap="onModeChange">未绑定</view>
+    </view>
   </view>
 
   <view class="loading-box" wx:if="{{loading && list.length === 0}}">
@@ -31,13 +33,14 @@
 
   <view class="empty-box" wx:if="{{!loading && list.length === 0}}">
     <view class="empty-title">暂无玩家统计数据</view>
-    <view class="empty-sub">点击上方“刷新数据”生成全局玩家统计</view>
+    <view class="empty-sub">点击上方“刷新”生成全局玩家统计</view>
   </view>
 
   <scroll-view
     wx:if="{{list.length > 0}}"
     class="list-scroll"
     scroll-y
+    style="height: {{listAreaHeight}}px;"
     bindscrolltolower="onScrollToLower"
   >
     <block wx:for="{{list}}" wx:key="globalPlayerKey">
@@ -50,6 +53,8 @@
                 class="avatar"
                 mode="aspectFill"
                 src="{{item.avatarUrl ? item.avatarUrl : 'https://img.icons8.com/color/96/user-male-circle--v1.png'}}"
+                binderror="onPlayerAvatarError"
+                data-index="{{index}}"
               ></image>
               <view class="rank-badge {{item.rank===1 ? 'rank-top-1' : item.rank===2 ? 'rank-top-2' : item.rank===3 ? 'rank-top-3' : ''}}">#{{item.rank}}</view>
             </view>
@@ -86,13 +91,21 @@
 
     <view class="list-footer" wx:if="{{loading}}">加载更多中...</view>
     <view class="list-footer" wx:if="{{!hasMore}}">没有更多了</view>
+    <view class="list-bottom-space"></view>
   </scroll-view>
 </block>
 
-<view class="empty-state" wx:else>
+<view class="empty-state" wx:elif="{{!authChecking}}">
   <image class="empty-icon" src="https://img.icons8.com/ios/100/cccccc/lock.png"></image>
   <view class="empty-text">请登录后查看玩家数据</view>
   <button class="login-jump-btn" bindtap="goToProfile">去登录</button>
+</view>
+
+<view wx:if="{{authChecking}}" class="global-auth-mask">
+  <view class="global-auth-mask__panel">
+    <view class="global-auth-spinner"></view>
+    <text class="global-auth-text">正在校验登录状态...</text>
+  </view>
 </view>
 
 </view>

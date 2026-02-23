@@ -801,8 +801,10 @@ exports.main = async (event, context) => {
 
     // 5. 用户头像临时链接转换
     const userList = Object.values(userStatsMap)
+    const stableAvatarMap = {}
     const fileList = []
     userList.forEach(u => {
+      stableAvatarMap[u.userId] = u.avatarUrl || ''
       if (u.avatarUrl && u.avatarUrl.indexOf('cloud://') === 0) fileList.push(u.avatarUrl)
     })
 
@@ -827,7 +829,13 @@ exports.main = async (event, context) => {
 
     // 6. 返回
     finalResults.sort((a, b) => safeNumber(b.net) - safeNumber(a.net))
-    const persistResult = await persistMatchPlayerStats(gameId, finalResults, matchData.status || '', FACT_COLLECTION)
+    const persistResults = finalResults.map(item => {
+      if (!item || !item.isUser) return item
+      const stableAvatar = stableAvatarMap[item.userId]
+      if (!stableAvatar || stableAvatar === item.avatarUrl) return item
+      return Object.assign({}, item, { avatarUrl: stableAvatar })
+    })
+    const persistResult = await persistMatchPlayerStats(gameId, persistResults, matchData.status || '', FACT_COLLECTION)
     console.log('[match_analysis] 分析完成:', gameId, 'handFacts:', handFacts.length, 'players:', finalResults.length)
 
     return {
