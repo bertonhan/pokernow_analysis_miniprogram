@@ -1,14 +1,37 @@
-# 1. 依赖包 (如果你的项目以后用到 npm，这个巨大的文件夹不能传)
-node_modules/
-miniprogram_npm/
+# ===== OS / Editor junk =====
+.DS_Store
+Thumbs.db
+*.log
 
-# 2. 微信开发者工具的“个人私有配置” (包含你的 appid 和个性化设置，不要传)
+# ===== WeChat DevTools (个人配置，必须忽略) =====
 project.private.config.json
 
-# 3. Mac 系统产生的垃圾文件
-.DS_Store
+# ===== IDE (按需：推荐忽略，但可白名单 extensions/settings) =====
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea/
 
-# 4. 运行日志和错误日志
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
+# ===== Node deps =====
+node_modules/
+**/node_modules/
+
+# ===== 小程序 npm 构建产物（二选一：推荐忽略）=====
+miniprogram_npm/
+# 如果你们团队决定“提交 miniprogram_npm”（仓库会变大但省事）
+# 就把上面这一行删掉或注释掉
+
+# ===== 通用构建产物 =====
+dist/
+build/
+coverage/
+*.map
+
+# ===== CloudBase / 云开发本地目录（强烈建议忽略）=====
+.cloudbase/
+# 你截图里的 .cloudbase/container/debug.json 一般属于本机调试/缓存文件，不建议进仓库
+
+# ===== 临时文件 =====
+*.tmp
+*.swp
+*.swo
