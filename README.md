@@ -88,6 +88,11 @@ cloudfunctions/
   match_analysis_batch/
 
 miniprogram/
+  config/
+    ai-agent.js
+    ai-prompts.js
+  utils/
+    ai-bot-client.js
   pages/match/list/
   pages/match/detail/
   pages/match/bind/
@@ -109,6 +114,82 @@ miniprogram/
 2. 在 `miniprogram/app.js` 配置云环境 ID。  
 3. 对改动过的云函数执行“上传并部署：云端安装依赖”。  
 4. 重新编译小程序并验证详情页。
+
+## 6.1 AI 架构（前后端已拆分）
+
+### 前端（小程序）
+
+- `miniprogram/config/ai-agent.js`  
+  - 统一维护 Agent 基础配置（`botId`、场景常量、默认玩家数）。
+- `miniprogram/config/ai-prompts.js`  
+  - 统一维护所有“页面点击触发”的 user prompt 模板。
+  - 新增 AI 能力时，优先在这里新增 scene 与 prompt builder。
+- `miniprogram/utils/ai-bot-client.js`  
+  - 统一封装 `wx.cloud.extend.AI.bot.sendMessage`。
+  - 内置流式解析、SSE 兼容提取、错误事件提取，页面层只负责 UI。
+
+### 后端（Agent 云函数）
+
+- `cloudfunctions/agent-gejuai-3g1et8v907e82c71/src/model-config.js`  
+  - 统一维护“基模型预设 + 运行参数 + 环境变量解析”。
+- `cloudfunctions/agent-gejuai-3g1et8v907e82c71/src/agent.js`  
+  - 只负责创建 ChatOpenAI 与 LangChain Agent，不再散落模型配置。
+- `cloudfunctions/agent-gejuai-3g1et8v907e82c71/src/utils.js`  
+  - 通过模型配置中心做缺参校验（返回更明确的缺失项）。
+
+## 6.2 前端新增一个 AI 点击功能（推荐流程）
+
+1. 在 `miniprogram/config/ai-agent.js` 新增一个场景常量（sceneId）。  
+2. 在 `miniprogram/config/ai-prompts.js` 新增对应 builder，并加入 `PROMPT_BUILDERS`。  
+3. 在目标页面中：
+   - 调 `buildPromptByScene(sceneId, payload)` 生成 prompt；
+   - 调 `runAgentPrompt(...)` 发送请求并更新 UI。  
+4. 重新编译小程序，点击页面按钮验证流式输出。
+
+## 6.3 更换基模型（即插即用流程）
+
+说明：当前 Agent 走 OpenAI 兼容协议，优先通过环境变量切换，不改业务代码。
+
+### 步骤 1：选择切换方式
+
+- 方式 A（推荐）：使用预设 `MODEL_PRESET`  
+  - 预设维护在 `cloudfunctions/agent-gejuai-3g1et8v907e82c71/src/model-config.js`。
+- 方式 B：自定义 `OPENAI_MODEL + OPENAI_BASE_URL`  
+  - 适合未内置到预设的模型供应商。
+
+### 步骤 2：在云函数环境变量中配置
+
+必填：
+
+- `OPENAI_API_KEY`（或你指定的 `MODEL_API_KEY_ENV` 对应变量）
+
+二选一：
+
+- 预设模式：
+  - `MODEL_PRESET=glm_4_7`（当前默认）
+- 自定义模式：
+  - `OPENAI_MODEL=<你的模型名>`
+  - `OPENAI_BASE_URL=<你的兼容接口地址>`
+
+可选调参（不填则走默认）：
+
+- `OPENAI_TIMEOUT_MS`（默认 `20000`）
+- `OPENAI_MAX_RETRIES`（默认 `1`）
+- `OPENAI_TEMPERATURE`
+- `OPENAI_MAX_TOKENS`
+- `OPENAI_USE_RESPONSES_API`（默认 `false`）
+
+### 步骤 3：上传并部署 Agent 云函数
+
+- 微信开发者工具 -> `cloudfunctions/agent-gejuai-3g1et8v907e82c71`  
+- 右键 -> “上传并部署：云端安装依赖”
+
+### 步骤 4：验证是否切换成功
+
+1. 打开对局详情页，点击“GejuAI 快速分析测试”。  
+2. 查看云函数日志中 `"[geju-agent] model runtime"`：  
+   - `model`、`baseURL`、`effectivePresetId` 是否符合预期。  
+3. 页面能收到文本输出，说明链路正常。
 
 ## 7. 常用手动操作
 

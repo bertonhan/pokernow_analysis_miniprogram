@@ -33,9 +33,16 @@
 
 | 变量名 | 必填 | 说明 |
 |--------|------|------|
+| `MODEL_PRESET` | ❌ | 预设模型 ID（默认 `glm_4_7`，可在 `src/model-config.js` 查看） |
 | `OPENAI_API_KEY` | ✅ | OpenAI API 密钥或兼容服务的 API 密钥 |
-| `OPENAI_BASE_URL` | ✅ | API 基础地址，如 `https://api.openai.com/v1` |
-| `OPENAI_MODEL` | ✅ | 模型名称，如 `gpt-4o` 或 `gpt-3.5-turbo` |
+| `OPENAI_BASE_URL` | 条件必填 | 自定义模式必填（不用预设时） |
+| `OPENAI_MODEL` | 条件必填 | 自定义模式必填（不用预设时） |
+| `MODEL_API_KEY_ENV` | ❌ | API Key 变量名（默认 `OPENAI_API_KEY`） |
+| `OPENAI_TIMEOUT_MS` | ❌ | 请求超时（毫秒），默认 `20000` |
+| `OPENAI_MAX_RETRIES` | ❌ | 重试次数，默认 `1` |
+| `OPENAI_TEMPERATURE` | ❌ | 采样温度 |
+| `OPENAI_MAX_TOKENS` | ❌ | 单次输出上限 |
+| `OPENAI_USE_RESPONSES_API` | ❌ | 是否走 responses API，默认 `false` |
 | `LOG_LEVEL` | ❌ | 日志级别，可选值：`trace`/`debug`/`info`/`warn`/`error`/`fatal`，默认 `info` |
 | `ENABLE_CORS` | ❌ | 是否启用 CORS，设为 `true` 启用。本地开发跨域调试时可启用，生产环境建议通过网关配置 |
 
@@ -44,6 +51,19 @@
 ```bash
 cp .env.example .env
 ```
+
+## 模型切换（即插即用）
+
+模型相关配置已集中在：
+
+- `src/model-config.js`
+
+切换方式：
+
+1. 预设模式（推荐）：只改 `MODEL_PRESET`。  
+2. 自定义模式：填写 `OPENAI_BASE_URL + OPENAI_MODEL`。  
+
+部署后可在日志里查看 `"[geju-agent] model runtime"`，确认实际生效模型。
 
 ## 安装依赖
 

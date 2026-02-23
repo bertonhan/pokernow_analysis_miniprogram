@@ -1,26 +1,18 @@
+import { getMissingModelConfig, resolveModelRuntimeConfig } from "./model-config.js";
+
 /**
  * Express 中间件：检查必需的环境变量
  *
- * 在处理请求前验证大模型配置是否完整，
- * 如果缺少配置则返回 503 错误，避免后续调用失败。
+ * 在处理请求前验证“解析后的模型配置”是否完整。
+ * 支持两种模式：
+ * 1) 预设模式（MODEL_PRESET）
+ * 2) 自定义模式（OPENAI_MODEL + OPENAI_BASE_URL）
  *
- * 必需的环境变量：
- * - OPENAI_MODEL: 模型名称
- * - OPENAI_API_KEY: API 密钥
- * - OPENAI_BASE_URL: API 基础地址
+ * 如果缺少关键项则返回 503，避免后续调用失败。
  */
 export function checkOpenAIEnvMiddleware(_req, res, next) {
-  const missingVars = [];
-
-  if (!process.env.OPENAI_MODEL) {
-    missingVars.push("OPENAI_MODEL");
-  }
-  if (!process.env.OPENAI_API_KEY) {
-    missingVars.push("OPENAI_API_KEY");
-  }
-  if (!process.env.OPENAI_BASE_URL) {
-    missingVars.push("OPENAI_BASE_URL");
-  }
+  const modelConfig = resolveModelRuntimeConfig();
+  const missingVars = getMissingModelConfig(modelConfig);
 
   // 缺少环境变量时返回 503，提示用户配置
   if (missingVars.length > 0) {
@@ -28,6 +20,10 @@ export function checkOpenAIEnvMiddleware(_req, res, next) {
       error: "Service Unavailable",
       message: `Missing required environment variables: ${missingVars.join(", ")}`,
       code: "MISSING_ENV_CONFIG",
+      detail: {
+        preset: modelConfig.effectivePresetId,
+        requiredApiKeyEnv: modelConfig.apiKeyEnvName,
+      },
     });
     return;
   }
