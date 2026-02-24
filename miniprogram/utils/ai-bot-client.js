@@ -120,6 +120,7 @@ function formatRunError(code, message) {
  * @param {string} options.prompt
  * @param {string} options.threadId
  * @param {string} options.runId
+ * @param {Object} [options.state]
  * @param {(fullText: string, chunkText: string) => void} [options.onPartialText]
  * @param {(info: any) => void} [options.onDebug]
  * @returns {Promise<{ text: string, error: string, response: any }>}
@@ -207,6 +208,7 @@ async function runAgentPrompt(options) {
   const runId = opts.runId || `run-${nowTs}`
   const threadId = opts.threadId || `thread-${nowTs}`
   const userMessageId = opts.userMessageId || `msg-${nowTs}`
+  const clientState = opts.state && typeof opts.state === 'object' ? opts.state : {}
 
   const response = await wx.cloud.extend.AI.bot.sendMessage({
     data: {
@@ -220,7 +222,7 @@ async function runAgentPrompt(options) {
       messages: [{ id: userMessageId, role: 'user', content: prompt }],
       tools: [],
       context: [],
-      state: {}
+      state: clientState
     },
     onText: (value) => {
       const textValue = extractTextFromUnknownPayload(value, textDecoder)

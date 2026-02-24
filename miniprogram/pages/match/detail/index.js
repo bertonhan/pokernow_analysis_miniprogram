@@ -3,6 +3,7 @@ const app = getApp()
 const db = wx.cloud.database()
 const { AI_AGENT_CONFIG, AI_PROMPT_SCENES } = require('../../../config/ai-agent')
 const { runAiScene, AI_SCENE_RUN_CODES } = require('../../../utils/ai-scene-runner')
+const { renderMarkdownToBlocks } = require('../../../utils/markdown-renderer')
 
 Page({
   data: {
@@ -14,6 +15,7 @@ Page({
     canRename: false, // 【新增】控制编辑按钮显隐
     aiAnalyzing: false,
     aiResult: '',
+    aiMarkdownBlocks: [],
     aiError: '',
     aiUserMatchData: null
   },
@@ -23,6 +25,46 @@ Page({
       this.setData({ gameId: options.id })
       this.loadMatchDetail(options.id)
     }
+  },
+
+  onUnload() {
+    this.clearAiMarkdownTimer()
+  },
+
+  clearAiMarkdownTimer() {
+    if (this._aiMarkdownTimer) {
+      clearTimeout(this._aiMarkdownTimer)
+      this._aiMarkdownTimer = null
+    }
+  },
+
+  applyAiMarkdownResult(rawText) {
+    const nextText = typeof rawText === 'string' ? rawText : ''
+    if (nextText === this._lastAiMarkdownText) return
+
+    this._lastAiMarkdownText = nextText
+    this.setData({
+      aiResult: nextText,
+      aiMarkdownBlocks: renderMarkdownToBlocks(nextText)
+    })
+  },
+
+  scheduleAiMarkdownResult(rawText) {
+    this._pendingAiMarkdownText = typeof rawText === 'string' ? rawText : ''
+    if (this._aiMarkdownTimer) return
+
+    this._aiMarkdownTimer = setTimeout(() => {
+      this._aiMarkdownTimer = null
+      this.applyAiMarkdownResult(this._pendingAiMarkdownText || '')
+    }, 120)
+  },
+
+  flushAiMarkdownResult(rawText) {
+    if (typeof rawText === 'string') {
+      this._pendingAiMarkdownText = rawText
+    }
+    this.clearAiMarkdownTimer()
+    this.applyAiMarkdownResult(this._pendingAiMarkdownText || '')
   },
 
   loadMatchDetail(gameId) {
@@ -199,6 +241,19 @@ Page({
     }
     wx.stopPullDownRefresh()
   },
+  onTapMarkdownLink(e) {
+    const url = e && e.currentTarget && e.currentTarget.dataset
+      ? (e.currentTarget.dataset.url || '')
+      : ''
+    if (!url) return
+
+    wx.setClipboardData({
+      data: url,
+      success: () => {
+        wx.showToast({ title: '链接已复制', icon: 'none' })
+      }
+    })
+  },
   onCopyStats() {
     const { matchInfo, statsList } = this.data
     
@@ -280,9 +335,13 @@ Page({
   async onRunAiQuickTest() {
     if (this.data.aiAnalyzing) return
 
+    this.clearAiMarkdownTimer()
+    this._pendingAiMarkdownText = ''
+    this._lastAiMarkdownText = ''
     this.setData({
       aiAnalyzing: true,
       aiResult: '',
+      aiMarkdownBlocks: [],
       aiError: '',
       aiUserMatchData: null
     })
@@ -304,7 +363,7 @@ Page({
         threadId: this.data.gameId || `geju-${nowTs}`,
         runId: `run-${nowTs}`,
         onPartialText: (fullText) => {
-          this.setData({ aiResult: fullText })
+          this.scheduleAiMarkdownResult(fullText)
         },
         onDebug: (info) => {
           if (!info || typeof info !== 'object') return
@@ -324,19 +383,24 @@ Page({
       }
 
       if (aiRunResult.code === AI_SCENE_RUN_CODES.AI_NOT_SUPPORTED) {
-        this.setData({ aiError: aiRunResult.error, aiResult: '' })
+        this.flushAiMarkdownResult('')
+        this.setData({ aiError: aiRunResult.error, aiResult: '', aiMarkdownBlocks: [] })
         wx.showToast({ title: 'AI能力不可用', icon: 'none' })
         return
       }
 
       if (aiRunResult.code === AI_SCENE_RUN_CODES.RUN_ERROR) {
+        this.flushAiMarkdownResult(aiRunResult.text || this._pendingAiMarkdownText || '')
         this.setData({ aiError: aiRunResult.error })
         return
       }
 
-      this.setData({ aiResult: aiRunResult.text || '' })
+      this.flushAiMarkdownResult(aiRunResult.text || '')
     } catch (err) {
       console.error('[match_detail] AI quick test failed:', err)
+      if (this._pendingAiMarkdownText) {
+        this.flushAiMarkdownResult(this._pendingAiMarkdownText)
+      }
       const errMsg = (err && (err.errMsg || err.message)) ? (err.errMsg || err.message) : 'AI 调用失败'
       const debugInfo = err && typeof err === 'object'
         ? JSON.stringify({

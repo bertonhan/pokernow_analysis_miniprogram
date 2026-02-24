@@ -47,11 +47,20 @@ async function runAiScene(options) {
   }
 
   const nowTs = Date.now()
+  const clientState = Object.assign(
+    {},
+    opts.state && typeof opts.state === 'object' ? opts.state : {},
+    {
+      __client_scene_id__: sceneId || '',
+      __client_sent_at__: nowTs
+    }
+  )
   const aiRunResult = await runAgentPrompt({
     botId: opts.botId || AI_AGENT_CONFIG.botId,
     prompt,
     threadId: opts.threadId || `geju-${nowTs}`,
     runId: opts.runId || `run-${nowTs}`,
+    state: clientState,
     onPartialText: opts.onPartialText,
     onDebug: opts.onDebug
   })

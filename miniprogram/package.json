@@ -1,0 +1,12 @@
+{
+  "name": "geju-miniprogram",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Geju WeChat mini program dependencies",
+  "scripts": {
+    "postinstall": "node ./scripts/patch-argparse.js"
+  },
+  "dependencies": {
+    "markdown-it": "^14.1.0"
+  }
+}

@@ -1,6 +1,6 @@
 # AGENTS.md — 德扑格局（微信小程序 + 云开发）
 
-更新时间：2026-02-22
+更新时间：2026-02-25
 
 ## 0. 你在这个仓库里的角色
 你是这个项目的“安全、稳健、可回滚”的编码助手。  
@@ -12,20 +12,30 @@
 ---
 
 ## 1. 项目概况（先理解，再动手）
-- 产品：PokerNow 对局记录、数据分析与复盘工具（含 VPIP/PFR/AF、高阶指标、标签体系、玩家总榜）。
-- 核心数据链路：`match_crawler -> match_hand_etl -> match_analysis`。
+- 产品：PokerNow 对局记录、统计分析、复盘与 AI 辅助分析工具（含 VPIP/PFR/AF、高阶指标、标签体系、玩家总榜、对局分析 Agent）。
+- 核心数据链路（统计）：
+  - `match_crawler -> match_hand_etl -> match_analysis`
+- 核心数据链路（AI）：
+  - `pages/match/detail` 点击“对局分析”
+  - `match_ai_context` 组装 `userMatchData`
+  - `agent-gejuai-3g1et8v907e82c71` 执行 LangChain Agent
+  - 前端按 Markdown 渲染输出，并落库 `ai_bot_chat_history / ai_bot_chat_trace`
 - 关键约束（不可破坏）：
   - **对局进行中（防作弊）**：隐藏对手真实身份，仅展示游戏昵称；用户只能看到自己绑定信息。
   - **对局结束（复盘）**：公开绑定关系，便于复盘交流。
   - **身份绑定系统**：支持“认领 + 多账号聚合”（多个临时昵称归属同一格局ID）。
   - **冠军命名权**：仅在满足“已结束 + 盈利第一名 + 未改名过”等条件下允许重命名，并自动加日期前缀。
+  - **AI 场景治理**：页面层统一通过 `sceneId + payload` 触发，不在页面散落硬编码 prompt；prompt 文案与数据拼装分层维护。
 
 ---
 
 ## 2. 技术栈与目录结构（按项目当前事实）
 ### 技术栈
 - 前端：微信小程序原生（WXML / WXSS / JS / JSON）
+- 前端 npm：`miniprogram/package.json` + 微信开发者工具“构建 npm”（当前用于 `markdown-it` 渲染）
 - 后端：微信云开发（Node.js 云函数）
+- Agent 框架：LangChain + `@cloudbase/agent-server` / `@cloudbase/agent-adapter-langchain`
+- 模型接入：OpenAI 兼容协议（当前默认 GLM-4.7，可通过环境变量切换）
 - 数据库：云数据库（NoSQL）
 
 ### 当前目录结构（定位改动范围）
@@ -37,14 +47,20 @@
   - `match_hand_etl/`、`match_hand_etl_batch/`（基础事实层）
   - `match_analysis/`、`match_analysis_batch/`（聚合分析层）
   - `match_bind_tool/`（绑定逻辑）
+  - `match_ai_context/`（AI 输入上下文拼装）
+  - `agent-gejuai-3g1et8v907e82c71/`（AI Agent 云函数）
   - `player_global_build/`、`player_global_query/`（玩家总榜构建/查询）
 - miniprogram/
   - `pages/match/list`、`pages/match/detail`、`pages/match/bind`
   - `pages/player/index`、`pages/player/detail`
   - `pages/profile/index`
+  - `config/ai-agent.js`、`config/ai-prompt-texts.js`、`config/ai-prompts.js`
+  - `utils/ai-bot-client.js`、`utils/ai-scene-runner.js`、`utils/markdown-renderer.js`
+  - `scripts/patch-argparse.js`（npm 构建兼容脚本）
   - `styles/design-tokens.wxss`（全局设计 token）
+  - `miniprogram_npm/`（构建后的 npm 包产物）
 - docs/
-  - `frontend_design_spec.md`（前端统一设计规范）
+  - `frontend_design_spec.md`、`architecture_overview.md`
 - `project.config.json`（工程配置）
 
 > 备注：`pages/match/add` 已移除，不要再作为入口页面使用。
@@ -102,7 +118,7 @@
 ### 前端（miniprogram）
 - 保持现有页面结构：WXML / WXSS / JS 分层，不引入新框架。
 - UI 改动重点保护页面：`match/list`、`match/detail`、`match/bind`、`player/index`、`player/detail`。
-- 优先 token 化：字号/间距/圆角/按钮尺寸尽量引用 `design-tokens.wxss`。
+- 优先 token 化：字号/间距/圆角/按钮尺寸必须引用 `design-tokens.wxss`。
 
 ### 云函数（cloudfunctions）
 - 所有入口参数必须校验：缺参返回明确错误信息（不要 silent fail）。

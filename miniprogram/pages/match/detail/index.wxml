@@ -15,6 +15,23 @@ var getTagClass = function(tag) {
 module.exports.getTagClass = getTagClass;
 </wxs>
 
+<template name="mdSegments">
+  <block wx:for="{{segments}}" wx:key="index" wx:for-item="seg">
+    <text wx:if="{{seg.type === 'strong'}}" class="md-inline-strong">{{seg.text}}</text>
+    <text wx:elif="{{seg.type === 'em'}}" class="md-inline-em">{{seg.text}}</text>
+    <text wx:elif="{{seg.type === 'code'}}" class="md-inline-code">{{seg.text}}</text>
+    <text
+      wx:elif="{{seg.type === 'link'}}"
+      class="md-inline-link"
+      data-url="{{seg.url}}"
+      bindtap="onTapMarkdownLink"
+    >
+      {{seg.text}}
+    </text>
+    <text wx:else>{{seg.text}}</text>
+  </block>
+</template>
+
 <view class="container" wx:if="{{!loading && matchInfo}}">
   
   <view class="header-section">
@@ -26,7 +43,10 @@ module.exports.getTagClass = getTagClass;
         </view>
       </view>
 
-      <view class="status-tag {{matchInfo.status=='记录中'?'green':''}}">{{matchInfo.status}}</view>
+      <view class="status-tag {{matchInfo.status=='记录中' ? 'running' : (matchInfo.status=='已暂停' ? 'paused' : 'ended')}}">
+        <view wx:if="{{matchInfo.status=='记录中'}}" class="dot"></view>
+        {{matchInfo.status}}
+      </view>
     </view>
     
     <view class="info-action-row">
@@ -62,7 +82,83 @@ module.exports.getTagClass = getTagClass;
       <view class="ai-result-card header-ai-result" wx:if="{{aiResult || aiError}}">
         <view class="ai-result-title">对局分析</view>
         <view class="ai-result-error" wx:if="{{aiError}}">{{aiError}}</view>
-        <view class="ai-result-text selectable-text" wx:if="{{aiResult}}">{{aiResult}}</view>
+
+        <view class="ai-markdown-root" wx:if="{{aiMarkdownBlocks.length > 0}}">
+          <block wx:for="{{aiMarkdownBlocks}}" wx:key="id">
+            <view wx:if="{{item.type === 'heading'}}" class="md-block md-heading md-h{{item.level}}">
+              <text class="md-line">
+                <template is="mdSegments" data="{{segments: item.segments}}" />
+              </text>
+            </view>
+
+            <view wx:elif="{{item.type === 'paragraph'}}" class="md-block md-paragraph">
+              <text class="md-line selectable-text">
+                <template is="mdSegments" data="{{segments: item.segments}}" />
+              </text>
+            </view>
+
+            <view wx:elif="{{item.type === 'blockquote'}}" class="md-block md-quote">
+              <text class="md-line selectable-text">
+                <template is="mdSegments" data="{{segments: item.segments}}" />
+              </text>
+            </view>
+
+            <view wx:elif="{{item.type === 'list'}}" class="md-block md-list">
+              <view class="md-list-row" wx:for="{{item.items}}" wx:key="id" wx:for-item="listItem">
+                <text class="md-list-marker">{{listItem.marker}}</text>
+                <text class="md-line md-list-line selectable-text">
+                  <template is="mdSegments" data="{{segments: listItem.segments}}" />
+                </text>
+              </view>
+            </view>
+
+            <view wx:elif="{{item.type === 'table'}}" class="md-block md-table-wrap">
+              <scroll-view class="md-table-scroll" scroll-x="true" enable-flex="true">
+                <view class="md-table">
+                  <view class="md-table-row md-table-head" wx:if="{{item.header && item.header.length > 0}}">
+                    <view
+                      class="md-table-cell md-table-head-cell md-table-align-{{headCell.align || 'left'}}"
+                      wx:for="{{item.header}}"
+                      wx:key="id"
+                      wx:for-item="headCell"
+                    >
+                      <text class="md-line md-table-line selectable-text">
+                        <template is="mdSegments" data="{{segments: headCell.segments}}" />
+                      </text>
+                    </view>
+                  </view>
+
+                  <view
+                    class="md-table-row md-table-body-row"
+                    wx:for="{{item.rows}}"
+                    wx:key="id"
+                    wx:for-item="tableRow"
+                  >
+                    <view
+                      class="md-table-cell md-table-body-cell md-table-align-{{cell.align || 'left'}}"
+                      wx:for="{{tableRow.cells}}"
+                      wx:key="id"
+                      wx:for-item="cell"
+                    >
+                      <text class="md-line md-table-line selectable-text">
+                        <template is="mdSegments" data="{{segments: cell.segments}}" />
+                      </text>
+                    </view>
+                  </view>
+                </view>
+              </scroll-view>
+            </view>
+
+            <view wx:elif="{{item.type === 'code'}}" class="md-block md-code-wrap">
+              <text class="md-code-lang" wx:if="{{item.language}}">{{item.language}}</text>
+              <text class="md-code-content selectable-text">{{item.code}}</text>
+            </view>
+
+            <view wx:elif="{{item.type === 'hr'}}" class="md-block md-hr"></view>
+          </block>
+        </view>
+
+        <view class="ai-result-text selectable-text" wx:elif="{{aiResult}}">{{aiResult}}</view>
       </view>
     </view>
   </view>
@@ -73,17 +169,19 @@ module.exports.getTagClass = getTagClass;
       
       <view class="title-row">
         <view class="section-title">选手战绩分析</view>
-        
-        <view 
-          class="copy-btn" 
-          wx:if="{{matchInfo.status === '已结束'}}" 
-          bindtap="onCopyStats"
-        >
-          <image class="copy-icon" src="https://img.icons8.com/material-outlined/48/000000/copy.png"></image>
+
+        <view class="title-actions">
+          <view class="section-subtitle">按盈利排序</view>
+
+          <view 
+            class="copy-btn" 
+            wx:if="{{matchInfo.status === '已结束'}}" 
+            bindtap="onCopyStats"
+          >
+            <image class="copy-icon" src="https://img.icons8.com/material-outlined/48/000000/copy.png"></image>
+          </view>
         </view>
       </view>
-
-      <view class="section-subtitle">按盈利排序</view>
     </view>
 
     <view wx:if="{{analyzing}}" class="loading-box">
