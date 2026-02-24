@@ -14,7 +14,8 @@ Page({
     canRename: false, // 【新增】控制编辑按钮显隐
     aiAnalyzing: false,
     aiResult: '',
-    aiError: ''
+    aiError: '',
+    aiUserMatchData: null
   },
 
   onLoad(options) {
@@ -242,11 +243,37 @@ Page({
       }
     })
   },
-  buildAiQuickReviewPayload() {
+  buildAiQuickReviewPayload(userMatchData) {
     return {
       matchInfo: this.data.matchInfo,
       statsList: this.data.statsList,
-      maxPlayers: AI_AGENT_CONFIG.maxPlayers
+      maxPlayers: AI_AGENT_CONFIG.maxPlayers,
+      userMatchData: userMatchData || this.data.aiUserMatchData || null
+    }
+  },
+
+  async loadAiMatchContext() {
+    const gameId = this.data.gameId
+    if (!gameId) return { ok: false, msg: '缺少对局ID' }
+
+    try {
+      const res = await wx.cloud.callFunction({
+        name: 'match_ai_context',
+        data: {
+          gameId,
+          detailLimit: 80
+        }
+      })
+      const result = (res && res.result) || {}
+      if (result.code === 1 && result.data) {
+        return { ok: true, data: result.data }
+      }
+      return { ok: false, msg: result.msg || '构建对局分析上下文失败' }
+    } catch (err) {
+      const errMsg = (err && (err.errMsg || err.message))
+        ? (err.errMsg || err.message)
+        : '构建对局分析上下文失败'
+      return { ok: false, msg: errMsg }
     }
   },
 
@@ -256,14 +283,24 @@ Page({
     this.setData({
       aiAnalyzing: true,
       aiResult: '',
-      aiError: ''
+      aiError: '',
+      aiUserMatchData: null
     })
 
     try {
+      const contextRes = await this.loadAiMatchContext()
+      if (!contextRes.ok) {
+        this.setData({ aiError: contextRes.msg || '构建对局分析上下文失败' })
+        wx.showToast({ title: '上下文获取失败', icon: 'none' })
+        return
+      }
+
+      this.setData({ aiUserMatchData: contextRes.data })
+
       const nowTs = Date.now()
       const aiRunResult = await runAiScene({
         sceneId: AI_PROMPT_SCENES.MATCH_DETAIL_QUICK_REVIEW,
-        payload: this.buildAiQuickReviewPayload(),
+        payload: this.buildAiQuickReviewPayload(contextRes.data),
         threadId: this.data.gameId || `geju-${nowTs}`,
         runId: `run-${nowTs}`,
         onPartialText: (fullText) => {

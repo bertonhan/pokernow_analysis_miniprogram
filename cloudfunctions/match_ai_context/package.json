@@ -1,0 +1,13 @@
+{
+  "name": "match_ai_context",
+  "version": "1.0.0",
+  "description": "Build user match context for LangChain analysis",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"no test\""
+  },
+  "license": "ISC",
+  "dependencies": {
+    "wx-server-sdk": "~3.0.2"
+  }
+}

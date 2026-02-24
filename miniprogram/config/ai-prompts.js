@@ -12,11 +12,23 @@ function toSafeNumber(value, fallback) {
   return Number.isFinite(num) ? num : fallback
 }
 
+function safeJsonStringify(value, fallback) {
+  try {
+    const text = JSON.stringify(value, null, 2)
+    return typeof text === 'string' ? text : fallback
+  } catch (err) {
+    return fallback
+  }
+}
+
 function buildMatchDetailQuickReviewPrompt(payload) {
   const data = payload && typeof payload === 'object' ? payload : {}
   const matchInfo = data.matchInfo && typeof data.matchInfo === 'object' ? data.matchInfo : null
   const statsList = Array.isArray(data.statsList) ? data.statsList : []
   const maxPlayers = Math.max(1, Math.min(10, toSafeNumber(data.maxPlayers, 6)))
+  const userMatchData = data.userMatchData && typeof data.userMatchData === 'object'
+    ? data.userMatchData
+    : null
 
   if (!matchInfo || statsList.length === 0) {
     return ''
@@ -40,11 +52,32 @@ function buildMatchDetailQuickReviewPrompt(payload) {
     }, index)
   })
 
+  const compactUserMatchData = userMatchData
+    ? {
+        gameId: userMatchData.gameId || '',
+        matchStatus: userMatchData.matchStatus || '',
+        isEnded: !!userMatchData.isEnded,
+        currentUser: userMatchData.currentUser || {},
+        totals: userMatchData.totals || {},
+        qualityHint: userMatchData.qualityHint || {},
+        handFacts: userMatchData.handFacts || {},
+        playerStats: Array.isArray(userMatchData.playerStats)
+          ? userMatchData.playerStats.slice(0, 12)
+          : []
+      }
+    : {}
+
+  let userMatchDataText = safeJsonStringify(compactUserMatchData, '{}')
+  if (userMatchDataText.length > 24000) {
+    userMatchDataText = userMatchDataText.slice(0, 24000) + '\n...<truncated>'
+  }
+
   return buildMatchDetailQuickReviewPromptText({
     matchName: matchInfo.name || '',
     matchStatus: matchInfo.status || '',
     currentHandNumber: matchInfo.currentHandNumber || '',
-    playerLines: playerLines
+    playerLines: playerLines,
+    userMatchDataText: userMatchDataText
   })
 }
 

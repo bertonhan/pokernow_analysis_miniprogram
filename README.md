@@ -86,6 +86,7 @@ cloudfunctions/
   match_hand_etl_batch/
   match_analysis/
   match_analysis_batch/
+  match_ai_context/
 
 miniprogram/
   config/
@@ -158,6 +159,8 @@ miniprogram/
   - 只负责创建 ChatOpenAI 与 LangChain Agent，不再散落模型配置。
 - `cloudfunctions/agent-gejuai-3g1et8v907e82c71/src/utils.js`  
   - 通过模型配置中心做缺参校验（返回更明确的缺失项）。
+- `cloudfunctions/match_ai_context/index.js`  
+  - 为“对局分析”生成 `userMatchData`（在局判断、结束状态、手牌/摊牌/统计拼装）。
 
 ## 6.2 前端新增一个 AI 点击功能（推荐流程）
 
@@ -165,6 +168,7 @@ miniprogram/
 2. 在 `miniprogram/config/ai-prompt-texts.js` 维护该场景的 Prompt 文案模板。  
 3. 在 `miniprogram/config/ai-prompts.js` 新增对应 builder，并加入 `PROMPT_BUILDERS`。  
 4. 在目标页面中：
+   - 先调 `match_ai_context` 拉取 `userMatchData`；
    - 调 `runAiScene({ sceneId, payload, ... })` 发送请求并更新 UI；
    - 页面不再手写 prompt 组装和底层流式处理。  
 5. 重新编译小程序，点击页面按钮验证流式输出。
@@ -213,6 +217,21 @@ miniprogram/
 2. 查看云函数日志中 `"[geju-agent] model runtime"`：  
    - `model`、`baseURL`、`effectivePresetId` 是否符合预期。  
 3. 页面能收到文本输出，说明链路正常。
+
+## 6.4 对局分析最小冒烟测试（推荐每次改动后执行）
+
+1. 部署云函数：
+   - `match_ai_context`
+   - `agent-gejuai-3g1et8v907e82c71`（云端安装依赖）
+2. 重新编译小程序，进入任意对局详情页。
+3. 点击顶部按钮“对局分析”。
+4. 预期现象：
+   - 按钮进入“分析中...”
+   - 顶部卡片下方出现流式文本
+   - 完成后显示完整分析内容
+5. 若失败，优先看两段日志：
+   - 小程序控制台是否有 `ai sendMessage response keys`
+   - Agent 云函数日志是否出现 `Run started` 与 `Run finished`
 
 ## 7. 常用手动操作
 
