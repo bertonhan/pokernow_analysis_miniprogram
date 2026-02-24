@@ -2,8 +2,7 @@
 const app = getApp()
 const db = wx.cloud.database()
 const { AI_AGENT_CONFIG, AI_PROMPT_SCENES } = require('../../../config/ai-agent')
-const { buildPromptByScene } = require('../../../config/ai-prompts')
-const { isAiBotSupported, runAgentPrompt } = require('../../../utils/ai-bot-client')
+const { runAiScene, AI_SCENE_RUN_CODES } = require('../../../utils/ai-scene-runner')
 
 Page({
   data: {
@@ -243,29 +242,16 @@ Page({
       }
     })
   },
-  buildAiQuickReviewPrompt() {
-    return buildPromptByScene(AI_PROMPT_SCENES.MATCH_DETAIL_QUICK_REVIEW, {
+  buildAiQuickReviewPayload() {
+    return {
       matchInfo: this.data.matchInfo,
       statsList: this.data.statsList,
       maxPlayers: AI_AGENT_CONFIG.maxPlayers
-    })
+    }
   },
 
   async onRunAiQuickTest() {
     if (this.data.aiAnalyzing) return
-
-    const prompt = this.buildAiQuickReviewPrompt()
-    if (!prompt) {
-      wx.showToast({ title: '暂无可分析数据', icon: 'none' })
-      return
-    }
-
-    if (!isAiBotSupported()) {
-      const unsupportedMsg = '当前基础库不支持云开发 AI，请升级到 3.7.1 或以上后再试。'
-      this.setData({ aiError: unsupportedMsg, aiResult: '' })
-      wx.showToast({ title: 'AI能力不可用', icon: 'none' })
-      return
-    }
 
     this.setData({
       aiAnalyzing: true,
@@ -275,13 +261,11 @@ Page({
 
     try {
       const nowTs = Date.now()
-      const threadId = this.data.gameId || `geju-${nowTs}`
-      const runId = `run-${nowTs}`
-      const aiRunResult = await runAgentPrompt({
-        botId: AI_AGENT_CONFIG.botId,
-        prompt,
-        threadId,
-        runId,
+      const aiRunResult = await runAiScene({
+        sceneId: AI_PROMPT_SCENES.MATCH_DETAIL_QUICK_REVIEW,
+        payload: this.buildAiQuickReviewPayload(),
+        threadId: this.data.gameId || `geju-${nowTs}`,
+        runId: `run-${nowTs}`,
         onPartialText: (fullText) => {
           this.setData({ aiResult: fullText })
         },
@@ -297,17 +281,23 @@ Page({
         }
       })
 
-      if (aiRunResult.error) {
-        this.setData({ aiError: aiRunResult.error })
+      if (aiRunResult.code === AI_SCENE_RUN_CODES.EMPTY_PROMPT) {
+        wx.showToast({ title: '暂无可分析数据', icon: 'none' })
+        return
       }
 
-      if (aiRunResult.text) {
-        this.setData({ aiResult: aiRunResult.text })
-      } else {
-        this.setData({
-          aiResult: 'AI 请求已发出，但没有收到文本流。请到云开发控制台查看 GejuAI 日志。'
-        })
+      if (aiRunResult.code === AI_SCENE_RUN_CODES.AI_NOT_SUPPORTED) {
+        this.setData({ aiError: aiRunResult.error, aiResult: '' })
+        wx.showToast({ title: 'AI能力不可用', icon: 'none' })
+        return
       }
+
+      if (aiRunResult.code === AI_SCENE_RUN_CODES.RUN_ERROR) {
+        this.setData({ aiError: aiRunResult.error })
+        return
+      }
+
+      this.setData({ aiResult: aiRunResult.text || '' })
     } catch (err) {
       console.error('[match_detail] AI quick test failed:', err)
       const errMsg = (err && (err.errMsg || err.message)) ? (err.errMsg || err.message) : 'AI 调用失败'

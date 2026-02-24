@@ -5,6 +5,7 @@ cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 const db = cloud.database()
 
 const FACT_COLLECTION = 'match_hand_facts'
+const FACT_SCHEMA_VERSION = 2
 
 const RANK_VALUE_MAP = {
   '2': 2,
@@ -834,18 +835,11 @@ function buildHandFact(gameId, handNumber, logs) {
       raiseVsFlopCbetCount: raiseVsFlopCbetCountSet[pid] ? 1 : 0,
       sprFlop: streetSpr.FLOP.players[pid] === undefined ? null : streetSpr.FLOP.players[pid],
       sprTurn: streetSpr.TURN.players[pid] === undefined ? null : streetSpr.TURN.players[pid],
-      sprRiver: streetSpr.RIVER.players[pid] === undefined ? null : streetSpr.RIVER.players[pid],
-      actions: {
-        preflop: playerActions[pid].PREFLOP.slice(),
-        flop: playerActions[pid].FLOP.slice(),
-        turn: playerActions[pid].TURN.slice(),
-        river: playerActions[pid].RIVER.slice()
-      }
+      sprRiver: streetSpr.RIVER.players[pid] === undefined ? null : streetSpr.RIVER.players[pid]
     }
   })
 
-  const allInPlayerIds = Object.keys(allInPlayers)
-  const isAllInHand = allInPlayerIds.length > 0
+  const isAllInHand = Object.keys(allInPlayers).length > 0
 
   const showdownPlayers = []
   Object.keys(showCardsMap).forEach(pid => {
@@ -860,11 +854,9 @@ function buildHandFact(gameId, handNumber, logs) {
       playerId: pid,
       playerName: handPlayers[pid] || pid,
       holeCards: holeCards.map(card => card.text),
-      holeCardsRaw: holeCards.map(card => ({ rank: card.rank, suit: card.suit })),
       rangeKey: rangeInfo.rangeKey,
       rangeTier: rangeInfo.rangeTier,
       rangeLabel: rangeInfo.rangeLabel,
-      rangeRank: rangeInfo.rangeRank,
       rangePercent: rangeInfo.rangePercent,
       rangeEquity: rangeInfo.rangeEquity,
       comboCount: rangeInfo.comboCount,
@@ -885,49 +877,21 @@ function buildHandFact(gameId, handNumber, logs) {
 
   return {
     _id: gameId + '_' + handNumber,
+    schemaVersion: FACT_SCHEMA_VERSION,
     gameId: gameId,
     handNumber: handNumber,
-    playerCount: playerIds.length,
-    board: {
-      flop: board.flop.map(card => card.text),
-      turn: board.turn.map(card => card.text),
-      river: board.river.map(card => card.text)
-    },
-    positions: positions,
-    streetSpr: {
-      flop: streetSpr.FLOP,
-      turn: streetSpr.TURN,
-      river: streetSpr.RIVER
-    },
     players: playerStats,
-    allInHand: isAllInHand,
-    allInPlayerIds: allInPlayerIds,
-    showdownPlayers: showdownPlayers,
-    updateTime: new Date()
+    showdownPlayers: showdownPlayers
   }
 }
 
 async function upsertFact(handFact) {
   const docId = handFact._id
   const docRef = db.collection(FACT_COLLECTION).doc(docId)
-  const now = new Date()
   const writeData = Object.assign({}, handFact)
   delete writeData._id
 
-  const old = await docRef.get().catch(() => null)
-  if (old && old.data) {
-    const data = Object.assign({}, writeData, {
-      createTime: old.data.createTime || now,
-      updateTime: now
-    })
-    await docRef.set({ data: data })
-  } else {
-    const data = Object.assign({}, writeData, {
-      createTime: now,
-      updateTime: now
-    })
-    await docRef.set({ data: data })
-  }
+  await docRef.set({ data: writeData })
 }
 
 async function processSingleHand(gameId, handNumber) {

@@ -90,9 +90,11 @@ cloudfunctions/
 miniprogram/
   config/
     ai-agent.js
+    ai-prompt-texts.js
     ai-prompts.js
   utils/
     ai-bot-client.js
+    ai-scene-runner.js
   pages/match/list/
   pages/match/detail/
   pages/match/bind/
@@ -108,6 +110,22 @@ miniprogram/
 - `match_player_stats`：`match_analysis` 聚合并写回的结果。
 - `users`：用户资料（含 gejuId、头像等）。
 
+### 5.1 `match_hand_facts` 精简结构（`schemaVersion=2`）
+
+从 `match_hand_etl` 新写入的数据开始，默认使用精简结构（兼容版）：
+
+- 保留：`gameId`、`handNumber`、`players[]`、`showdownPlayers[]`（分析链路实际读取字段）。
+- 新增：`schemaVersion=2`（便于后续继续演进结构）。
+- 移除冗余字段（不影响当前分析结果）：
+  - 顶层：`playerCount`、`positions`、`board`、`streetSpr`、`allInHand`、`allInPlayerIds`、`createTime`、`updateTime`
+  - `players[]`：`actions`
+  - `showdownPlayers[]`：`holeCardsRaw`、`rangeRank`
+
+兼容说明：
+
+- `match_analysis` 当前只读取 `handNumber`、`players`、`showdownPlayers`，因此可直接兼容旧数据与新数据混合存在。
+- 历史旧文档不会自动改写；只有该手牌被重新 ETL（upsert）时才会变成精简结构。
+
 ## 6. 本地开发与部署
 
 1. 用微信开发者工具导入项目根目录。  
@@ -121,12 +139,16 @@ miniprogram/
 
 - `miniprogram/config/ai-agent.js`  
   - 统一维护 Agent 基础配置（`botId`、场景常量、默认玩家数）。
+- `miniprogram/config/ai-prompt-texts.js`  
+  - 统一维护 Prompt 文案模板（纯文本层）。
 - `miniprogram/config/ai-prompts.js`  
-  - 统一维护所有“页面点击触发”的 user prompt 模板。
-  - 新增 AI 能力时，优先在这里新增 scene 与 prompt builder。
+  - 统一维护所有“页面点击触发”的输入整理逻辑（`payload -> prompt入参`）。
+  - 通过调用 `ai-prompt-texts.js` 的模板函数拼装最终 prompt。
 - `miniprogram/utils/ai-bot-client.js`  
-  - 统一封装 `wx.cloud.extend.AI.bot.sendMessage`。
+  - 统一封装底层 `wx.cloud.extend.AI.bot.sendMessage`。
   - 内置流式解析、SSE 兼容提取、错误事件提取，页面层只负责 UI。
+- `miniprogram/utils/ai-scene-runner.js`  
+  - 场景级调用器：页面只需传 `sceneId + payload`，复用同一套流式逻辑。
 
 ### 后端（Agent 云函数）
 
@@ -140,11 +162,12 @@ miniprogram/
 ## 6.2 前端新增一个 AI 点击功能（推荐流程）
 
 1. 在 `miniprogram/config/ai-agent.js` 新增一个场景常量（sceneId）。  
-2. 在 `miniprogram/config/ai-prompts.js` 新增对应 builder，并加入 `PROMPT_BUILDERS`。  
-3. 在目标页面中：
-   - 调 `buildPromptByScene(sceneId, payload)` 生成 prompt；
-   - 调 `runAgentPrompt(...)` 发送请求并更新 UI。  
-4. 重新编译小程序，点击页面按钮验证流式输出。
+2. 在 `miniprogram/config/ai-prompt-texts.js` 维护该场景的 Prompt 文案模板。  
+3. 在 `miniprogram/config/ai-prompts.js` 新增对应 builder，并加入 `PROMPT_BUILDERS`。  
+4. 在目标页面中：
+   - 调 `runAiScene({ sceneId, payload, ... })` 发送请求并更新 UI；
+   - 页面不再手写 prompt 组装和底层流式处理。  
+5. 重新编译小程序，点击页面按钮验证流式输出。
 
 ## 6.3 更换基模型（即插即用流程）
 

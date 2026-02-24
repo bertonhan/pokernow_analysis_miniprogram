@@ -29,20 +29,41 @@ module.exports.getTagClass = getTagClass;
       <view class="status-tag {{matchInfo.status=='记录中'?'green':''}}">{{matchInfo.status}}</view>
     </view>
     
-    <view class="info-block">
-      <view class="info-row">
-        <text class="label">对局 ID</text>
-        <text class="value id-text selectable-text">{{matchInfo.gameId}}</text>
+    <view class="info-action-row">
+      <view class="info-block">
+        <view class="info-row">
+          <text class="label">对局 ID</text>
+          <text class="value id-text selectable-text">{{matchInfo.gameId}}</text>
+        </view>
+        <view class="info-row">
+          <text class="label">当前手牌</text>
+          <text class="value highlight">Hand #{{matchInfo.currentHandNumber}}</text>
+        </view>
       </view>
-      <view class="info-row">
-        <text class="label">当前手牌</text>
-        <text class="value highlight">Hand #{{matchInfo.currentHandNumber}}</text>
+
+      <view class="header-ai-trigger" wx:if="{{statsList.length > 0}}">
+        <view class="ai-test-btn" bindtap="onRunAiQuickTest">
+          {{aiAnalyzing ? '分析中...' : '对局分析'}}
+        </view>
       </view>
     </view>
 
     <view class="privacy-banner" wx:if="{{matchInfo.status !== '已结束'}}">
       <icon type="info" size="14" color="#0050b3"></icon>
       <text>对局进行中，已隐藏选手真实身份</text>
+    </view>
+
+    <view class="header-ai-extension" wx:if="{{aiAnalyzing || aiResult || aiError}}">
+      <view wx:if="{{aiAnalyzing}}" class="loading-box header-loading-box">
+        <view class="loading-spinner"></view>
+        <text>AI 正在分析牌局...</text>
+      </view>
+
+      <view class="ai-result-card header-ai-result" wx:if="{{aiResult || aiError}}">
+        <view class="ai-result-title">对局分析</view>
+        <view class="ai-result-error" wx:if="{{aiError}}">{{aiError}}</view>
+        <view class="ai-result-text selectable-text" wx:if="{{aiResult}}">{{aiResult}}</view>
+      </view>
     </view>
   </view>
 
@@ -63,23 +84,11 @@ module.exports.getTagClass = getTagClass;
       </view>
 
       <view class="section-subtitle">按盈利排序</view>
-
-      <view class="ai-test-row" wx:if="{{statsList.length > 0}}">
-        <view class="ai-test-btn" bindtap="onRunAiQuickTest">
-          {{aiAnalyzing ? 'GejuAI 分析中...' : 'GejuAI 快速分析测试'}}
-        </view>
-      </view>
     </view>
 
     <view wx:if="{{analyzing}}" class="loading-box">
       <view class="loading-spinner"></view>
-      <text>AI 正在分析牌局...</text>
-    </view>
-
-    <view class="ai-result-card" wx:if="{{aiResult || aiError}}">
-      <view class="ai-result-title">GejuAI 测试输出</view>
-      <view class="ai-result-error" wx:if="{{aiError}}">{{aiError}}</view>
-      <view class="ai-result-text selectable-text" wx:if="{{aiResult}}">{{aiResult}}</view>
+      <text>正在加载选手战绩...</text>
     </view>
 
     <block wx:for="{{statsList}}" wx:key="playerId">
