@@ -12,6 +12,47 @@ function safeNumber(value, fallback = 0) {
   return Number.isFinite(num) ? num : fallback;
 }
 
+async function safeCallHook(fn, ...args) {
+  if (typeof fn !== "function") return;
+  try {
+    await fn(...args);
+  } catch (err) {
+    console.error("[geju-agent] trace hook failed", err);
+  }
+}
+
+function summarizeStreamContract(value) {
+  const isObjLike = value !== null && (typeof value === "object" || typeof value === "function");
+  if (!isObjLike) {
+    return {
+      valueType: typeof value,
+      ctor: "",
+      hasPipe: false,
+      hasThen: false,
+      hasSubscribe: false,
+      keys: [],
+    };
+  }
+
+  const ctor = value && value.constructor && value.constructor.name
+    ? String(value.constructor.name)
+    : "";
+
+  let keys = [];
+  try {
+    keys = Object.keys(value).slice(0, 8);
+  } catch (_) {}
+
+  return {
+    valueType: typeof value,
+    ctor,
+    hasPipe: typeof value.pipe === "function",
+    hasThen: typeof value.then === "function",
+    hasSubscribe: typeof value.subscribe === "function",
+    keys,
+  };
+}
+
 function pickTextFromContent(content) {
   if (!content) return "";
   if (typeof content === "string") return content;
@@ -68,6 +109,50 @@ function findLatestUserText(messages) {
 
   const fallback = list[list.length - 1];
   return getMessageText(fallback);
+}
+
+function pickModelResponseText(value, depth = 0) {
+  if (depth > 6 || value === null || value === undefined) return "";
+  if (typeof value === "string") return value;
+  if (Array.isArray(value)) {
+    return value.map((item) => pickModelResponseText(item, depth + 1)).filter(Boolean).join("\n");
+  }
+  if (typeof value !== "object") return "";
+
+  if (typeof value.text === "string") return value.text;
+  if (typeof value.content === "string") return value.content;
+
+  if (Array.isArray(value.content)) {
+    const text = value.content
+      .map((item) => {
+        if (!item) return "";
+        if (typeof item === "string") return item;
+        if (typeof item.text === "string") return item.text;
+        if (typeof item.content === "string") return item.content;
+        return "";
+      })
+      .filter(Boolean)
+      .join("\n");
+    if (text) return text;
+  }
+
+  const nestedKeys = [
+    "output_text",
+    "outputText",
+    "response",
+    "output",
+    "result",
+    "message",
+    "messages",
+    "data",
+  ];
+  for (const key of nestedKeys) {
+    if (!Object.prototype.hasOwnProperty.call(value, key)) continue;
+    const nested = pickModelResponseText(value[key], depth + 1);
+    if (nested) return nested;
+  }
+
+  return "";
 }
 
 function extractJsonObjectFromText(text, anchorRegex) {
@@ -129,7 +214,7 @@ function extractJsonObjectFromText(text, anchorRegex) {
   }
 }
 
-function parseUserMatchDataFromUserText(userText) {
+export function parseUserMatchDataFromUserText(userText) {
   const text = typeof userText === "string" ? userText : "";
   if (!text) return null;
 
@@ -223,33 +308,81 @@ function summarizeUserMatchData(data) {
   };
 }
 
-const gejuAnalysisPolicyMiddleware = createMiddleware({
-  name: "GejuAnalysisPolicyMiddleware",
-  wrapModelCall: (request, handler) => {
-    try {
+function createGejuAnalysisPolicyMiddleware(traceHooks) {
+  const hooks = traceHooks && typeof traceHooks === "object" ? traceHooks : {};
+  return createMiddleware({
+    name: "GejuAnalysisPolicyMiddleware",
+    wrapModelCall: (request, handler) => {
+      const requestStartedAtMs = Date.now();
       const userText = findLatestUserText(request.messages);
       const userMatchData = parseUserMatchDataFromUserText(userText);
-      if (!userMatchData) return handler(request);
 
-      const policyText = buildLangchainPolicyFromUserMatchData(userMatchData);
-      console.log("[geju-agent] langchain policy injected", summarizeUserMatchData(userMatchData));
-      const baseSystem = typeof request.systemMessage === "string"
-        ? request.systemMessage
-        : "";
-      const nextSystemMessage = baseSystem
-        ? `${baseSystem}\n\n${policyText}`
-        : policyText;
-
-      return handler({
-        ...request,
-        systemMessage: nextSystemMessage,
+      safeCallHook(hooks.onTraceEvent, "MODEL_CALL_STARTED", {
+        hasUserMatchData: !!userMatchData,
       });
-    } catch (err) {
-      console.error("[geju-agent] GejuAnalysisPolicyMiddleware failed", err);
-      return handler(request);
-    }
-  },
-});
+
+      let nextRequest = request;
+      try {
+        if (userMatchData) {
+          const policyText = buildLangchainPolicyFromUserMatchData(userMatchData);
+          console.log("[geju-agent] langchain policy injected", summarizeUserMatchData(userMatchData));
+          safeCallHook(hooks.onTraceEvent, "POLICY_INJECTED", summarizeUserMatchData(userMatchData));
+
+          const baseSystem = typeof request.systemMessage === "string"
+            ? request.systemMessage
+            : "";
+          const nextSystemMessage = baseSystem
+            ? `${baseSystem}\n\n${policyText}`
+            : policyText;
+          nextRequest = {
+            ...request,
+            systemMessage: nextSystemMessage,
+          };
+        }
+
+        const result = handler(nextRequest);
+        const resultShape = summarizeStreamContract(result);
+        if (!resultShape.hasPipe) {
+          console.warn("[geju-agent] wrapModelCall stream contract risk", resultShape);
+        } else if (process.env.GEJU_DEBUG_STREAM === "true") {
+          console.log("[geju-agent] wrapModelCall stream contract ok", resultShape);
+        }
+
+        // 关键：必须原样返回 handler 的结果（尤其是可流式对象），
+        // 不能在这里包装成 Promise，否则会破坏下游 .pipe() 链路。
+        Promise.resolve(result)
+          .then((resolved) => {
+            const modelText = pickModelResponseText(resolved);
+            safeCallHook(hooks.onModelOutput, {
+              text: modelText,
+              durationMs: Date.now() - requestStartedAtMs,
+            });
+            safeCallHook(hooks.onTraceEvent, "MODEL_CALL_FINISHED", {
+              durationMs: Date.now() - requestStartedAtMs,
+              hasText: !!modelText,
+              textChars: modelText.length,
+            });
+          })
+          .catch((err) => {
+            safeCallHook(hooks.onTraceEvent, "MODEL_CALL_ERROR", {
+              durationMs: Date.now() - requestStartedAtMs,
+              name: err && err.name ? err.name : "Error",
+              message: err && err.message ? err.message : String(err),
+            });
+          });
+
+        return result;
+      } catch (err) {
+        safeCallHook(hooks.onTraceEvent, "MODEL_CALL_ERROR", {
+          durationMs: Date.now() - requestStartedAtMs,
+          name: err && err.name ? err.name : "Error",
+          message: err && err.message ? err.message : String(err),
+        });
+        throw err;
+      }
+    },
+  });
+}
 
 /**
  * 创建 LangChain Agent 实例
@@ -258,7 +391,8 @@ const gejuAnalysisPolicyMiddleware = createMiddleware({
  * - 管理对话历史
  * - 处理工具调用
  */
-export function createAgent() {
+export function createAgent(options = {}) {
+  const traceHooks = options && typeof options === "object" ? options.traceHooks || {} : {};
   const modelConfig = resolveModelRuntimeConfig();
   const modelOptions = {
     model: modelConfig.model,
@@ -287,7 +421,7 @@ export function createAgent() {
     model,
     tools: [],
     checkpointer,
-    middleware: [gejuAnalysisPolicyMiddleware],
+    middleware: [createGejuAnalysisPolicyMiddleware(traceHooks)],
     systemPrompt:
       "你是德州扑克职业选手，擅长对局分析，精通GTO与剥削策略。你必须用中文输出，并且严格遵守系统注入的执行策略。",
   });

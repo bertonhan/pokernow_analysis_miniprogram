@@ -1,243 +1,249 @@
-# 德扑格局 (PokerNow Analysis Mini Program)
+# 德扑格局 Agent
 
-基于微信小程序 + 云开发的德州扑克对局记录与复盘工具。  
-核心目标是把 PokerNow 日志转成可读、可比较、可复盘的选手数据。
+基于微信小程序 + 云开发的 PokerNow 对局记录、分析与复盘工具。  
+目标是把原始日志转成可读的战绩、可比较的指标、可复盘的玩家画像。
 
-## 1. 当前能力概览
+---
 
-- 对局管理：创建、更新、结束、删除、冠军改名。
-- 对局分析：VPIP/PFR/AF、3bet、4bet、isolate、C-bet、SPR、位置分布等。
-- 摊牌记录：底牌、起手牌力分组（169 组）、各街牌型、各街 SPR、各街动作。
-- 标签系统：主风格 + 翻前策略 + 翻后策略 + 运气标签。
-- 隐私机制：进行中隐藏对手真实身份；结束后公开绑定关系用于复盘。
+## 1. 当前功能总览
 
-## 2. 数据链路（本版本）
+### 1.1 对局列表（`/pages/match/list`）
 
-1. `match_crawler` 拉取并写入 `match_hands` 原始日志。  
-2. `match_hand_etl` 将每手牌清洗到 `match_hand_facts`（基础事实表）。  
-3. `match_analysis` 从 `match_hand_facts` 聚合选手统计，返回详情页数据，并写回 `match_player_stats`。  
-4. 详情页 `pages/match/detail` 展示结果与标签。
+- 新建对局：粘贴 PokerNow 链接后创建并自动启动爬取。
+- 对局管理：暂停/继续记录、结束对局。
+- 管理员删除：仅管理员可左滑并执行删除操作，非管理员不响应横向拖动。
+- 实时刷新：登录后自动轮询更新列表。
 
-设计目标：把重计算前置到 ETL，详情页分析仅做聚合，降低实时开销。
+### 1.2 对局详情（`/pages/match/detail`）
 
-## 3. 标签体系（当前线上代码）
+- 展示对局元信息：名称、状态、对局 ID、当前手牌。
+- 选手战绩分析：按盈利排序展示核心指标与标签。
+- 复制战绩：一键复制文本战绩。
+- 冠军改名：满足规则后可重命名对局名称（仅一次）。
+- AI 快速分析：支持流式输出对局评述（Markdown 渲染）。
 
-说明：同一名选手可同时命中多个标签。
+### 1.3 绑定页（`/pages/match/bind`）
 
-### 3.1 主风格标签
+- 选手身份绑定/解绑（玩家位 <-> 用户）。
+- 支持同一用户绑定多个选手名（多马甲聚合）。
+- 隐私规则：
+  - 对局进行中：隐藏他人真实身份映射。
+  - 对局已结束：公开绑定信息用于复盘。
 
-- `松凶`：`hands >= 10`，`vpip >= 33%`，且翻前主动度高（`pfr >= 16%` 且 `pfr/vpip >= 0.45`）。
-- `松弱`：`hands >= 10`，`vpip >= 33%`，但翻前主动度不足。
-- `紧凶`：`hands >= 10`，`vpip <= 22%`，且翻前主动度高。
-- `紧弱`：`hands >= 10`，`vpip <= 22%`，且翻前主动度不足。
-- `平衡`：未命中任何其他标签时兜底。
+### 1.4 玩家页（`/pages/player/index` + `/pages/player/detail`）
 
-### 3.2 翻前策略标签
+- 跨局总榜：`全部 / 已绑定 / 未绑定` 筛选。
+- 一键刷新：触发全局统计重建。
+- 玩家详情：展示聚合指标、风格标签、最近对局（按开始时间展示日期）。
+- 标签策略：玩家页不展示“运气类标签”（长期维度默认回归均值）。
 
-- `limper`：`hands >= 12`，且同时满足：
-  - `vpip >= 28%`
-  - `limp >= 10%`
-  - `limpRate >= pfrRate * 0.8`
-  - `limpHands >= 3`
-- `3bet压制`：`bet3Opp >= 5` 且 `3bet频率 >= 14%`。
-- `4bet战士`：`bet4Opp >= 3` 且 `4bet频率 >= 16%`。
-- `剥削`：`isolateOpp >= 4` 且 `isolate频率 >= 30%`。
-- `怕3bet`：`foldTo3BetOpp >= 4` 且 `foldTo3Bet >= 62%`。
+### 1.5 我的页（`/pages/profile/index`）
 
-### 3.3 翻后策略标签
+- 登录态资料维护：头像、昵称、格局 ID。
 
-- `持续施压`：`cbetOpp >= 5` 且 `cbet频率 >= 62%`。
-- `翻后保守`：`foldToFlopCbetOpp >= 4` 且 `foldToFlopCbet >= 62%`。
-- `翻后反击`：`raiseVsFlopCbetOpp >= 4` 且 `raiseVsFlopCbet >= 22%`。
-- `激进`：`AF >= 2.8`。
-- `跟注`：`0 < AF < 0.9`。
+### 1.6 全局体验
 
-### 3.4 运气标签（方案 2）
+- 小程序首页默认是对局列表页。
+- 登录校验完成前显示全局 Loading 遮罩，不闪“未登录态”页面。
+- 已启用组件按需注入：`miniprogram/app.json` 配置 `lazyCodeLoading: "requiredComponents"`。
 
-核心思路：比较“翻前权益预期”与“实际输赢”。
+---
 
-- `luckExpectedWins`：按摊牌玩家 `rangeEquity` 归一化后得到的预期胜局。
-- `luckActualWins`：实际胜局（摊牌赢记 1，输记 0）。
-- `luckDiff = luckActualWins - luckExpectedWins`。
+## 2. 核心业务规则
 
-触发条件（一般需 `luckHands >= 4`）：
+1. **防作弊优先**：对局进行中不暴露对手真实身份关系。  
+2. **复盘优先**：对局结束后开放绑定信息用于复盘讨论。  
+3. **统计口径固定**：先聚合分子/分母计数，再计算比率（避免“先算百分比再平均”的偏差）。  
+4. **管理员操作隔离**：删除等高风险操作仅管理员可见可用。  
+5. **重计算前置**：ETL 先产出基础事实表，详情分析以聚合为主，减少实时开销。  
 
-- `天选`：`luckDiff >= 0.9`，或 `luckAllInDogWins >= 2`。
-- `欧皇`：`luckDiff >= 0.45`，或 `luckGoodHits >= 2`。
-- `倒霉`：`luckDiff <= -0.9`，或 `luckAllInFavLoses >= 2`。
-- `非酋`：`luckDiff <= -0.45`，或 `luckBadBeats >= 2`。
-- `跑马王`：`luckAllInDogWins >= 2`。
-- `慈善家`（新版定义）：
-  - 牌力落后（`equity <= 40%` 或与当手最高权益差距 `>= 8%`）；
-  - 且主动进攻（`bets/raises/all-in`）；
-  - 且最终输掉；
-  - 聚合后满足 `charityAttempts >= 2`、`charityFails >= 2`、`charityRate >= 0.7`。
+---
 
-## 4. 目录结构
+## 3. 技术架构与数据链路
+
+### 3.1 技术栈
+
+- 前端：微信小程序原生（WXML / WXSS / JS）
+- 后端：微信云开发（云函数 + 云数据库）
+- 数据源：PokerNow（日志 + 账单）
+- AI：云开发 AI Bot（`agent-gejuai-3g1et8v907e82c71`）
+
+### 3.2 核心数据流
+
+1. `match_manager` 创建对局并触发 `match_crawler`。  
+2. `match_crawler` 拉取 `log_v3` 日志写入 `match_hands`，并同步账单到 `matches.ledger`。  
+3. 每手结束触发 `match_hand_etl`，写入 `match_hand_facts`。  
+4. 详情页调用 `match_analysis`，从 `match_hand_facts` 聚合结果并写回 `match_player_stats`。  
+5. 玩家页调用 `player_global_build / player_global_query`，构建并读取 `player_global_stats`。  
+6. AI 分析链路：`match_ai_context` 组装上下文，前端调用 AI Bot 流式返回。  
+
+---
+
+## 4. 目录结构（当前）
 
 ```text
 cloudfunctions/
   login/
   user_manager/
   match_manager/
-  match_bind_tool/
   match_crawler/
   match_hand_etl/
   match_hand_etl_batch/
   match_analysis/
   match_analysis_batch/
+  match_bind_tool/
+  player_global_build/
+  player_global_query/
   match_ai_context/
+  agent-gejuai-3g1et8v907e82c71/
 
 miniprogram/
+  pages/
+    match/list
+    match/detail
+    match/bind
+    player
+    player/detail
+    profile
   config/
     ai-agent.js
-    ai-prompt-texts.js
     ai-prompts.js
+    ai-prompt-texts.js
+  styles/
+    design-tokens.wxss
   utils/
     ai-bot-client.js
     ai-scene-runner.js
-  pages/match/list/
-  pages/match/detail/
-  pages/match/bind/
+    markdown-renderer.js
   app.js
+  app.json
+  app.wxss
 ```
 
-## 5. 数据集合
+---
 
-- `matches`：对局元数据与 ledger。
-- `match_hands`：原始手牌日志（raw_logs）。
-- `match_hand_facts`：ETL 后的每手事实数据。
-- `match_player_bindings`：选手与用户绑定关系。
-- `match_player_stats`：`match_analysis` 聚合并写回的结果。
-- `users`：用户资料（含 gejuId、头像等）。
+## 5. 云函数能力清单
 
-### 5.1 `match_hand_facts` 精简结构（`schemaVersion=2`）
+### 5.1 用户与登录
 
-从 `match_hand_etl` 新写入的数据开始，默认使用精简结构（兼容版）：
+- `login`：返回调用者 `openid/appid/unionid`。
+- `user_manager`：
+  - `action: "get"` 获取当前用户资料
+  - `action: "update"` 更新资料（头像、昵称、格局 ID）
 
-- 保留：`gameId`、`handNumber`、`players[]`、`showdownPlayers[]`（分析链路实际读取字段）。
-- 新增：`schemaVersion=2`（便于后续继续演进结构）。
-- 移除冗余字段（不影响当前分析结果）：
-  - 顶层：`playerCount`、`positions`、`board`、`streetSpr`、`allInHand`、`allInPlayerIds`、`createTime`、`updateTime`
-  - `players[]`：`actions`
-  - `showdownPlayers[]`：`holeCardsRaw`、`rangeRank`
+### 5.2 对局管理与采集
 
-兼容说明：
+- `match_manager`：
+  - `list`：对局列表
+  - `create`：创建对局并触发爬虫
+  - `toggle_status`：暂停/继续
+  - `end_match`：结束对局（并触发 ETL 兜底补算）
+  - `delete`：管理员删除
+  - `rename_match`：冠军改名
+- `match_crawler`：持续抓取手牌日志与账单，支持超时接力与异常自动暂停。
 
-- `match_analysis` 当前只读取 `handNumber`、`players`、`showdownPlayers`，因此可直接兼容旧数据与新数据混合存在。
-- 历史旧文档不会自动改写；只有该手牌被重新 ETL（upsert）时才会变成精简结构。
+### 5.3 计算链路
 
-## 6. 本地开发与部署
+- `match_hand_etl`：
+  - 单手模式：`{ gameId, handNumber }`
+  - 分片全量模式：`{ gameId, startOffset, maxRuntimeMs, maxHandsPerRun, enableRelay }`
+- `match_hand_etl_batch`：多局批量触发 ETL，支持接力。
+- `match_analysis`：读取 `match_hand_facts` 聚合并写回 `match_player_stats`。
+- `match_analysis_batch`：批量触发分析，支持接力。
 
-1. 用微信开发者工具导入项目根目录。  
-2. 在 `miniprogram/app.js` 配置云环境 ID。  
-3. 对改动过的云函数执行“上传并部署：云端安装依赖”。  
-4. 重新编译小程序并验证详情页。
+### 5.4 绑定与玩家总榜
 
-## 6.1 AI 架构（前后端已拆分）
+- `match_bind_tool`：`getOpenId / getGejuIds / bind / unbind`
+- `player_global_build`：构建跨局玩家总榜数据（写 `player_global_stats`）。
+- `player_global_query`：`list / detail / rebuild`。
 
-### 前端（小程序）
+### 5.5 AI 相关
 
-- `miniprogram/config/ai-agent.js`  
-  - 统一维护 Agent 基础配置（`botId`、场景常量、默认玩家数）。
-- `miniprogram/config/ai-prompt-texts.js`  
-  - 统一维护 Prompt 文案模板（纯文本层）。
-- `miniprogram/config/ai-prompts.js`  
-  - 统一维护所有“页面点击触发”的输入整理逻辑（`payload -> prompt入参`）。
-  - 通过调用 `ai-prompt-texts.js` 的模板函数拼装最终 prompt。
-- `miniprogram/utils/ai-bot-client.js`  
-  - 统一封装底层 `wx.cloud.extend.AI.bot.sendMessage`。
-  - 内置流式解析、SSE 兼容提取、错误事件提取，页面层只负责 UI。
-- `miniprogram/utils/ai-scene-runner.js`  
-  - 场景级调用器：页面只需传 `sceneId + payload`，复用同一套流式逻辑。
+- `match_ai_context`：输出对局 AI 分析所需上下文。
+- `agent-gejuai-3g1et8v907e82c71`：AI Bot 运行入口（由云开发 AI 调用）。
 
-### 后端（Agent 云函数）
+---
 
-- `cloudfunctions/agent-gejuai-3g1et8v907e82c71/src/model-config.js`  
-  - 统一维护“基模型预设 + 运行参数 + 环境变量解析”。
-- `cloudfunctions/agent-gejuai-3g1et8v907e82c71/src/agent.js`  
-  - 只负责创建 ChatOpenAI 与 LangChain Agent，不再散落模型配置。
-- `cloudfunctions/agent-gejuai-3g1et8v907e82c71/src/utils.js`  
-  - 通过模型配置中心做缺参校验（返回更明确的缺失项）。
-- `cloudfunctions/match_ai_context/index.js`  
-  - 为“对局分析”生成 `userMatchData`（在局判断、结束状态、手牌/摊牌/统计拼装）。
+## 6. 数据库集合
 
-## 6.2 前端新增一个 AI 点击功能（推荐流程）
+### 6.1 核心集合（必需）
 
-1. 在 `miniprogram/config/ai-agent.js` 新增一个场景常量（sceneId）。  
-2. 在 `miniprogram/config/ai-prompt-texts.js` 维护该场景的 Prompt 文案模板。  
-3. 在 `miniprogram/config/ai-prompts.js` 新增对应 builder，并加入 `PROMPT_BUILDERS`。  
-4. 在目标页面中：
-   - 先调 `match_ai_context` 拉取 `userMatchData`；
-   - 调 `runAiScene({ sceneId, payload, ... })` 发送请求并更新 UI；
-   - 页面不再手写 prompt 组装和底层流式处理。  
-5. 重新编译小程序，点击页面按钮验证流式输出。
+- `matches`：对局元信息（状态、名称、当前手牌、账单等）
+- `match_hands`：原始手牌日志（`raw_logs`）
+- `match_hand_facts`：ETL 后每手事实数据
+- `match_player_bindings`：绑定关系
+- `match_player_stats`：单局聚合分析结果（`match_analysis` 写回）
+- `player_global_stats`：跨局玩家统计结果（`player_global_build` 写回）
+- `users`：用户资料
 
-## 6.3 更换基模型（即插即用流程）
+### 6.2 AI 相关集合（建议创建）
 
-说明：当前 Agent 走 OpenAI 兼容协议，优先通过环境变量切换，不改业务代码。
+- `ai_bot_chat_history`
+- `ai_bot_chat_trace`
 
-### 步骤 1：选择切换方式
+---
 
-- 方式 A（推荐）：使用预设 `MODEL_PRESET`  
-  - 预设维护在 `cloudfunctions/agent-gejuai-3g1et8v907e82c71/src/model-config.js`。
-- 方式 B：自定义 `OPENAI_MODEL + OPENAI_BASE_URL`  
-  - 适合未内置到预设的模型供应商。
+## 7. 指标与标签口径（当前实现）
 
-### 步骤 2：在云函数环境变量中配置
+### 7.1 指标口径（关键）
 
-必填：
+所有比率类指标都遵循：
 
-- `OPENAI_API_KEY`（或你指定的 `MODEL_API_KEY_ENV` 对应变量）
+1. 先把原始计数项累计（分子/分母）。
+2. 最后统一计算百分比或比值。
 
-二选一：
+常见指标：
 
-- 预设模式：
-  - `MODEL_PRESET=glm_4_7`（当前默认）
-- 自定义模式：
-  - `OPENAI_MODEL=<你的模型名>`
-  - `OPENAI_BASE_URL=<你的兼容接口地址>`
+- `VPIP = vpipHands / hands`
+- `PFR = pfrHands / hands`
+- `Limp = limpHands / hands`
+- `AF = (bets + raises) / calls`（calls=0 时做兜底）
+- `3Bet = bet3Count / bet3Opp`
+- `CBet = cbetCount / cbetOpp`
+- `WTSD = showdowns / sawFlopHands`
+- `WSD = showdownWins / showdowns`
 
-可选调参（不填则走默认）：
+### 7.2 标签规则
 
-- `OPENAI_TIMEOUT_MS`（默认 `20000`）
-- `OPENAI_MAX_RETRIES`（默认 `1`）
-- `OPENAI_TEMPERATURE`
-- `OPENAI_MAX_TOKENS`
-- `OPENAI_USE_RESPONSES_API`（默认 `false`）
+- 对局详情标签：主风格 + 翻前策略 + 翻后策略 + 运气类标签（含慈善家等）。
+- 玩家页标签：与对局标签同体系，但**过滤运气类标签**（`天选/欧皇/倒霉/非酋/跑马王`）。
 
-### 步骤 3：上传并部署 Agent 云函数
+---
 
-- 微信开发者工具 -> `cloudfunctions/agent-gejuai-3g1et8v907e82c71`  
-- 右键 -> “上传并部署：云端安装依赖”
+## 8. 本地开发与部署
 
-### 步骤 4：验证是否切换成功
+### 8.1 前置准备
 
-1. 打开对局详情页，点击“GejuAI 快速分析测试”。  
-2. 查看云函数日志中 `"[geju-agent] model runtime"`：  
-   - `model`、`baseURL`、`effectivePresetId` 是否符合预期。  
-3. 页面能收到文本输出，说明链路正常。
+1. 微信开发者工具导入项目根目录。
+2. 打开 `miniprogram/app.js`，确认云环境 ID（当前代码示例为 `cloud1-2gpsa3y0fb62239f`）。
+3. 打开 `miniprogram/app.json`，确认：
+   - 首页为 `pages/match/list/index`
+   - `lazyCodeLoading: "requiredComponents"`
 
-## 6.4 对局分析最小冒烟测试（推荐每次改动后执行）
+### 8.2 小程序依赖
 
-1. 部署云函数：
-   - `match_ai_context`
-   - `agent-gejuai-3g1et8v907e82c71`（云端安装依赖）
-2. 重新编译小程序，进入任意对局详情页。
-3. 点击顶部按钮“对局分析”。
-4. 预期现象：
-   - 按钮进入“分析中...”
-   - 顶部卡片下方出现流式文本
-   - 完成后显示完整分析内容
-5. 若失败，优先看两段日志：
-   - 小程序控制台是否有 `ai sendMessage response keys`
-   - Agent 云函数日志是否出现 `Run started` 与 `Run finished`
+在 `miniprogram` 目录执行：
 
-## 7. 常用手动操作
+```bash
+npm install
+```
 
-### 7.1 单局全量 ETL（推荐分片接力）
+然后在微信开发者工具执行“构建 npm”。
 
-在云函数 `match_hand_etl` 测试参数中传：
+### 8.3 云函数部署（改哪个传哪个）
+
+在微信开发者工具中：
+
+- 右键目标云函数目录
+- 选择“上传并部署：云端安装依赖”
+
+---
+
+## 9. 常用手动操作（云函数测试参数）
+
+### 9.1 单局全量 ETL（分片接力）
+
+调用 `match_hand_etl`：
 
 ```json
 {
@@ -249,10 +255,12 @@ miniprogram/
 }
 ```
 
-返回 `msg = "分片 ETL 进行中，已触发接力"` 表示正常。  
-等待接力完成后，可再次调用确认 `data.done = true`。
+判定标准：
 
-### 7.2 单局分析
+- 返回 `msg: "分片 ETL 进行中，已触发接力"`：正常接力中
+- 返回 `data.done: true`：该局 ETL 完成
+
+### 9.2 单局分析
 
 调用 `match_analysis`：
 
@@ -262,70 +270,108 @@ miniprogram/
 }
 ```
 
-成功后会返回 `data`（选手卡片数据），并写回 `match_player_stats`。
+成功后会：
 
-### 7.3 批量分析
+- 返回详情页所需选手数据
+- 写回 `match_player_stats`
+
+### 9.3 批量 ETL
+
+调用 `match_hand_etl_batch`：
+
+```json
+{
+  "gameIds": ["gameId1", "gameId2"],
+  "maxPerRun": 1,
+  "maxRuntimeMs": 1200,
+  "awaitEtl": false,
+  "etlMaxRuntimeMs": 2200,
+  "maxHandsPerRun": 12
+}
+```
+
+### 9.4 批量分析
 
 调用 `match_analysis_batch`：
 
 ```json
 {
-  "gameIds": ["gameId1", "gameId2", "gameId3"],
+  "gameIds": ["gameId1", "gameId2"],
   "maxPerRun": 1,
   "maxRuntimeMs": 1200,
   "awaitAnalysis": false
 }
 ```
 
-返回“已触发接力”属于正常状态。
+### 9.5 刷新玩家总榜
 
-## 8. 验收清单（微信开发者工具）
+调用 `player_global_query`：
 
-- 对局列表可正常展示，创建/结束/删除不报错。
-- 详情页可看到统计项与标签，且不出现“暂无数据”异常。
-- 对局结束后，绑定关系与头像按规则显示。
-- 手动触发 `match_analysis` 后，`match_player_stats` 有对应写入。
+```json
+{
+  "action": "rebuild",
+  "awaitBuild": true
+}
+```
 
-## 9. License
+---
 
-MIT
+## 10. 常见问题排查
 
-## 10. 前端设计规范（新增）
+### 10.1 `Invoking task timed out after 3 seconds`
 
-为保证后续页面风格一致，已制定并落地项目级前端设计规范：
+含义：云函数测试超时，不一定是业务逻辑错误。  
+处理：把云函数测试超时时间调大，或使用分片 + 接力参数（见第 9 章）。
 
-- `docs/frontend_design_spec.md`
+### 10.2 `对局不存在`
 
-内容包含：
+高概率原因：
 
-- 全量页面遍历后的视觉基线
-- 统一配色、字号、间距、圆角、阴影规范
-- 交互反馈规则（加载/确认/错误/空态）
-- 前端改动提交前检查清单
+1. `gameId` 传错（复制了名称而不是 ID）。
+2. 该局还未写入 `matches`。
 
-## 11. 最近更新（2026-02）
+先查：`matches` 集合里是否存在对应 `gameId`。
 
-### 11.1 玩家模块（全局统计）
+### 10.3 对局详情“暂无数据”
 
-- 新增玩家总榜链路：
-  - 云函数：`player_global_build`（重建统计）、`player_global_query`（分页查询/详情查询）
-  - 页面：`pages/player/index`（玩家列表）、`pages/player/detail`（玩家详情）
-- 展示规则：
-  - 已绑定玩家按跨局聚合展示
-  - 未绑定玩家按“每局选手”独立展示
-  - 支持“全部 / 已绑定 / 未绑定”筛选
+排查顺序：
 
-### 11.2 前端统一规范落地
+1. `match_hands` 是否有该局数据。
+2. `match_hand_facts` 是否已生成。
+3. 手动触发 `match_analysis` 看返回信息。
 
-- 新增全局 token 文件：`miniprogram/styles/design-tokens.wxss`
-  - 5 档字阶、3 档间距、3 档圆角
-  - 统一按钮尺寸、语义色、阴影层级
-- 新增并持续维护规范文档：`docs/frontend_design_spec.md`
-  - 增加“横向字间距”约束：默认 `letter-spacing: 0`（`--ls-0`）
-  - 英文/ID 特殊场景可局部使用 `--ls-1 (0.4rpx)`
+### 10.4 头像 403 / 图片加载失败
 
-### 11.3 列表滚动体验修复
+含义：旧签名 URL 过期或外链不可用。  
+当前策略：服务端优先转换临时链接（`cloud.getTempFileURL`），客户端失败时降级为默认头像。
 
-- 修复玩家列表页滚动到底部出现“空白遮盖带”的问题：
-  - 由固定高度滚动区改为弹性布局（`flex: 1` + `min-height: 0`）
-  - 与对局列表页的滚动行为保持一致
+### 10.5 iOS 时间解析告警
+
+不要直接依赖 `new Date("yyyy-MM-dd HH:mm")` 在所有环境都可用。  
+当前代码已做兼容解析，后续新增日期字段时继续沿用统一解析函数。
+
+---
+
+## 11. 最小验收清单（每次改动后）
+
+1. 对局列表：新建/暂停/继续/结束至少成功一次。
+2. 对局详情：可拉到分析数据，指标和标签正常展示。
+3. 绑定页：可绑定与解绑，进行中与结束后隐私规则正确。
+4. 玩家页：列表加载正常，刷新数据后详情可打开。
+5. AI 分析：详情页点击后有流式文本输出（至少一次成功）。
+
+---
+
+## 12. 设计与架构文档
+
+- 前端设计规范：`docs/frontend_design_spec.md`
+- 技术架构说明：`docs/architecture_overview.md`
+- AI 云函数说明：`cloudfunctions/agent-gejuai-3g1et8v907e82c71/README.md`
+
+---
+
+## 13. 安全与配置说明
+
+- 不要把真实密钥提交到仓库。
+- AI 模型配置请放到云函数环境变量（可参考 `cloudfunctions/agent-gejuai-3g1et8v907e82c71/.env.example`）。
+- 涉及删除、清库、批量覆盖写入等高风险操作，先备份再执行。
