@@ -23,6 +23,13 @@ async function runAiScene(options) {
   const sceneId = opts.sceneId || ''
   const payload = opts.payload || {}
   const prompt = buildPromptByScene(sceneId, payload)
+  if (typeof opts.onDebug === 'function') {
+    opts.onDebug({
+      type: 'prompt_size',
+      sceneId,
+      chars: typeof prompt === 'string' ? prompt.length : 0
+    })
+  }
 
   if (!prompt) {
     return {

@@ -316,7 +316,7 @@ Page({
         name: 'match_ai_context',
         data: {
           gameId,
-          detailLimit: 80
+          detailLimit: 40
         }
       })
       const result = (res && res.result) || {}
@@ -367,6 +367,10 @@ Page({
         },
         onDebug: (info) => {
           if (!info || typeof info !== 'object') return
+          if (info.type === 'prompt_size') {
+            console.log('[match_detail] ai prompt size', info.chars)
+            return
+          }
           if (info.type === 'response_keys') {
             console.log('[match_detail] ai sendMessage response keys', info.keys)
             return
