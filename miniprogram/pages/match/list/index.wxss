@@ -121,6 +121,32 @@ page {
   box-shadow: 0 10rpx 22rpx rgba(31, 103, 255, 0.28);
 }
 
+.manual-entry-row {
+  margin-top: var(--space-s);
+  display: flex;
+  align-items: center;
+  gap: var(--space-s);
+}
+
+.manual-entry-btn {
+  height: var(--btn-h);
+  line-height: var(--btn-h);
+  padding: 0 var(--btn-pad-x);
+  border-radius: var(--btn-radius);
+  background: linear-gradient(135deg, #10a5b8 0%, #1f67ff 100%);
+  color: #ffffff;
+  font-size: var(--btn-font-size);
+  font-weight: 700;
+  box-shadow: 0 10rpx 20rpx rgba(16, 110, 190, 0.24);
+}
+
+.manual-entry-tip {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--fz-5);
+  color: var(--ink-soft);
+}
+
 .btn-hover {
   opacity: 0.86;
   transform: scale(0.97);
