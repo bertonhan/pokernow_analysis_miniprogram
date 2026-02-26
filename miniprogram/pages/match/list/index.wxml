@@ -13,6 +13,10 @@
         <input class="link-input" placeholder="粘贴 PokerNow 对局链接" bindinput="onInputLink" value="{{inputLink}}"></input>
         <view class="add-btn" bindtap="createMatch" hover-class="btn-hover">新建</view>
       </view>
+      <view class="manual-entry-row">
+        <view class="manual-entry-btn" bindtap="goToManualEntry" hover-class="btn-hover">线下格局录入</view>
+        <text class="manual-entry-tip">手工录入非线上对局成绩</text>
+      </view>
     </view>
   </view>
 

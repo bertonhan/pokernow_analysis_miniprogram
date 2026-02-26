@@ -2,6 +2,7 @@
   "lazyCodeLoading": "requiredComponents",
   "pages": [
     "pages/match/list/index",
+    "pages/match/manual/index",
     "pages/profile/index",
     "pages/match/detail/index",
     "pages/player/index",

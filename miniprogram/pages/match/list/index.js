@@ -236,6 +236,10 @@ endMatch(e) {
     if (!this.data.isLoggedIn) return wx.showToast({ title: '请先登录', icon: 'none' })
     wx.navigateTo({ url: `/pages/match/bind/index?id=${e.currentTarget.dataset.id}` })
   },
+  goToManualEntry() {
+    if (!this.data.isLoggedIn) return wx.showToast({ title: '请先登录', icon: 'none' })
+    wx.navigateTo({ url: '/pages/match/manual/index' })
+  },
   goToProfile() { wx.switchTab({ url: '/pages/profile/index' }) }
 })
 
